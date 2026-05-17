@@ -2,10 +2,12 @@
 
 import dynamic from 'next/dynamic';
 import type { OnMount } from '@monaco-editor/react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLanguage } from '@/lib/languages';
 import { useIDEStore } from '@/store/ide-store';
 import { registerCompetitiveCompletions } from '@/lib/editor-completions';
+import { getLanguageServerConfig } from '@/lib/lsp-config';
+import { attachLanguageServer } from '@/services/lsp-client';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -13,13 +15,19 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
 });
 
 export function CodeEditor() {
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const [lspStatus, setLspStatus] = useState({ state: 'disabled', detail: 'Language server not connected.' });
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
   const code = useIDEStore((state) => state.codeByLanguage[state.selectedLanguage]);
   const setCode = useIDEStore((state) => state.setCode);
   const ui = useIDEStore((state) => state.ui);
   const language = getLanguage(selectedLanguage);
+  const lspConfig = getLanguageServerConfig(selectedLanguage);
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
     monaco.editor.defineTheme('vibe-judge-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -42,11 +50,33 @@ export function CodeEditor() {
     editor.focus();
   }, []);
 
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return undefined;
+
+    return attachLanguageServer(monacoRef.current, editorRef.current, language, (state, detail) => {
+      setLspStatus({ state, detail });
+    });
+  }, [language]);
+
   return (
     <div className="h-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-panel">
       <div className="flex h-10 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 text-xs text-slate-400">
         <span className="font-mono text-slate-200">main.{language.extension}</span>
-        <span>Ctrl+Space IntelliSense · Scanner-aware Java autocomplete · Ctrl+Enter Run</span>
+        <span className="hidden md:inline">Ctrl+Space IntelliSense · Scanner-aware Java autocomplete · Ctrl+Enter Run</span>
+        <span
+          title={lspStatus.detail}
+          className={`rounded-full border px-2 py-1 font-semibold ${
+            lspStatus.state === 'connected'
+              ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+              : lspStatus.state === 'connecting'
+                ? 'border-sky-400/30 bg-sky-400/10 text-sky-300'
+                : lspStatus.state === 'error'
+                  ? 'border-rose-400/30 bg-rose-400/10 text-rose-300'
+                  : 'border-slate-700 bg-slate-900 text-slate-500'
+          }`}
+        >
+          LSP: {lspConfig.name}
+        </span>
       </div>
       <MonacoEditor
         height="calc(100% - 40px)"

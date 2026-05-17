@@ -7,7 +7,7 @@ This is intentionally **not** a cloud IDE. It focuses on the workflow competitor
 ## Features
 
 - VSCode/Judge0/USACO-inspired dark IDE layout.
-- Monaco Editor with syntax highlighting, line numbers, autoclosing brackets, snippets, IntelliSense hooks, Scanner-aware Java completions, and optional minimap.
+- Monaco Editor with syntax highlighting, line numbers, autoclosing brackets, snippets, IntelliSense hooks, Scanner-aware Java completions, optional minimap, and optional LSP-backed completions/diagnostics.
 - Supported languages: C++, Python, Java, JavaScript, Rust, and Go, with competitive-programming snippets per language.
 - Top toolbar with language selector, Run, Submit, execution phase, verdict, runtime, and memory.
 - Resizable bottom panel with Output, Input, and Testcases tabs.
@@ -44,6 +44,33 @@ Configure endpoints with:
 NEXT_PUBLIC_JUDGE_API_URL="https://your-judge-api.example.com"
 NEXT_PUBLIC_JUDGE_WS_URL="wss://your-judge-api.example.com"
 ```
+
+
+## Optional free LSP integration
+
+The frontend can connect Monaco to free/open-source language servers through browser-accessible JSON-RPC WebSocket bridges. This repository still does **not** run language servers itself; deploy them separately and expose one WebSocket endpoint per language.
+
+Supported LSP backends:
+
+- Java → Eclipse JDT Language Server
+- C++ → clangd
+- Python → Pyright
+- JavaScript → typescript-language-server
+- Rust → rust-analyzer
+- Go → gopls
+
+Configure them with:
+
+```bash
+NEXT_PUBLIC_LSP_JAVA_WS="ws://localhost:3001/lsp/java"
+NEXT_PUBLIC_LSP_CPP_WS="ws://localhost:3001/lsp/cpp"
+NEXT_PUBLIC_LSP_PYTHON_WS="ws://localhost:3001/lsp/python"
+NEXT_PUBLIC_LSP_JAVASCRIPT_WS="ws://localhost:3001/lsp/js"
+NEXT_PUBLIC_LSP_RUST_WS="ws://localhost:3001/lsp/rust"
+NEXT_PUBLIC_LSP_GO_WS="ws://localhost:3001/lsp/go"
+```
+
+When an endpoint is configured, the editor sends `initialize`, `textDocument/didOpen`, `textDocument/didChange`, `textDocument/completion`, and consumes `textDocument/publishDiagnostics`. Snippet autocomplete still works when no LSP endpoint is configured.
 
 ## Project structure
 
