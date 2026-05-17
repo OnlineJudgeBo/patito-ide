@@ -5,36 +5,12 @@ import type { OnMount } from '@monaco-editor/react';
 import { useCallback } from 'react';
 import { getLanguage } from '@/lib/languages';
 import { useIDEStore } from '@/store/ide-store';
+import { registerCompetitiveCompletions } from '@/lib/editor-completions';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => <div className="h-full animate-pulse rounded-2xl bg-slate-900" />,
 });
-
-const snippetMap: Record<string, Array<{ label: string; detail: string; insertText: string }>> = {
-  cpp: [
-    { label: 'fast-io', detail: 'Competitive C++ fast IO', insertText: 'ios::sync_with_stdio(false);\ncin.tie(nullptr);' },
-    { label: 'vector<int>', detail: 'Vector declaration', insertText: 'vector<int> ${1:a}(${2:n});' },
-    { label: 'bfs', detail: 'Queue BFS skeleton', insertText: 'queue<int> q;\nvector<int> dist(${1:n}, -1);\ndist[${2:start}] = 0;\nq.push(${2:start});\nwhile (!q.empty()) {\n\tint u = q.front(); q.pop();\n\tfor (int v : ${3:adj}[u]) {\n\t\tif (dist[v] != -1) continue;\n\t\tdist[v] = dist[u] + 1;\n\t\tq.push(v);\n\t}\n}' },
-  ],
-  python: [
-    { label: 'read-tokens', detail: 'Read stdin tokens', insertText: 'import sys\n\ndata = sys.stdin.read().strip().split()\nit = iter(data)\n${0}' },
-    { label: 'next-int', detail: 'Parse next int', insertText: '${1:n} = int(next(it))' },
-  ],
-  java: [
-    { label: 'main-class', detail: 'Online judge Main class', insertText: 'import java.io.*;\nimport java.util.*;\n\npublic class Main {\n\tpublic static void main(String[] args) throws Exception {\n\t\t${0}\n\t}\n}' },
-    { label: 'arraylist', detail: 'ArrayList<Integer>', insertText: 'ArrayList<Integer> ${1:list} = new ArrayList<>();' },
-  ],
-  javascript: [
-    { label: 'node-input', detail: 'Read stdin in Node.js', insertText: "const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8').trim().split(/\\s+/);\nlet idx = 0;\n${0}" },
-  ],
-  rust: [
-    { label: 'read-stdin', detail: 'Read all stdin', insertText: 'let mut input = String::new();\nstd::io::stdin().read_to_string(&mut input).unwrap();\nlet mut it = input.split_whitespace();' },
-  ],
-  go: [
-    { label: 'bufio', detail: 'Buffered IO', insertText: 'in := bufio.NewReader(os.Stdin)\nout := bufio.NewWriter(os.Stdout)\ndefer out.Flush()' },
-  ],
-};
 
 export function CodeEditor() {
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
@@ -61,21 +37,7 @@ export function CodeEditor() {
     });
     monaco.editor.setTheme('vibe-judge-dark');
 
-    Object.entries(snippetMap).forEach(([monacoLanguage, snippets]) => {
-      monaco.languages.registerCompletionItemProvider(monacoLanguage, {
-        triggerCharacters: ['.', '#', '<', '(', ' '],
-        provideCompletionItems: (_model, position) => ({
-          suggestions: snippets.map((snippet) => ({
-            label: snippet.label,
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            detail: snippet.detail,
-            insertText: snippet.insertText,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            range: new monaco.Range(position.lineNumber, 1, position.lineNumber, position.column),
-          })),
-        }),
-      });
-    });
+    registerCompetitiveCompletions(monaco);
 
     editor.focus();
   }, []);
@@ -84,7 +46,7 @@ export function CodeEditor() {
     <div className="h-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-panel">
       <div className="flex h-10 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 text-xs text-slate-400">
         <span className="font-mono text-slate-200">main.{language.extension}</span>
-        <span>Ctrl+Space IntelliSense · Ctrl+Enter Run</span>
+        <span>Ctrl+Space IntelliSense · Scanner-aware Java autocomplete · Ctrl+Enter Run</span>
       </div>
       <MonacoEditor
         height="calc(100% - 40px)"

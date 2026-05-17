@@ -7,8 +7,8 @@ This is intentionally **not** a cloud IDE. It focuses on the workflow competitor
 ## Features
 
 - VSCode/Judge0/USACO-inspired dark IDE layout.
-- Monaco Editor with syntax highlighting, line numbers, autoclosing brackets, snippets, IntelliSense hooks, and optional minimap.
-- Supported languages: C++, Python, Java, JavaScript, Rust, and Go.
+- Monaco Editor with syntax highlighting, line numbers, autoclosing brackets, snippets, IntelliSense hooks, Scanner-aware Java completions, and optional minimap.
+- Supported languages: C++, Python, Java, JavaScript, Rust, and Go, with competitive-programming snippets per language.
 - Top toolbar with language selector, Run, Submit, execution phase, verdict, runtime, and memory.
 - Resizable bottom panel with Output, Input, and Testcases tabs.
 - Output sections for stdout, stderr, compile errors, logs, and verdict colors.
