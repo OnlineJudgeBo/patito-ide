@@ -6,8 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLanguage } from '@/lib/languages';
 import { useIDEStore } from '@/store/ide-store';
 import { registerCompetitiveCompletions } from '@/lib/editor-completions';
-import { getLanguageServerConfig } from '@/lib/lsp-config';
-import { attachLanguageServer } from '@/services/lsp-client';
+import { getLanguageServerConfig } from '@/lsp/config';
+import { lspDocumentFileName } from '@/lsp/document-uri';
+import { attachLanguageServer } from '@/lsp/monaco-adapter';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -17,12 +18,14 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
 export function CodeEditor() {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
   const [lspStatus, setLspStatus] = useState({ state: 'disabled', detail: 'Language server not connected.' });
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
   const code = useIDEStore((state) => state.codeByLanguage[state.selectedLanguage]);
   const setCode = useIDEStore((state) => state.setCode);
   const ui = useIDEStore((state) => state.ui);
   const language = getLanguage(selectedLanguage);
+  const fileName = lspDocumentFileName(language);
   const lspConfig = getLanguageServerConfig(selectedLanguage);
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
@@ -47,21 +50,22 @@ export function CodeEditor() {
 
     registerCompetitiveCompletions(monaco);
 
+    setEditorReady(true);
     editor.focus();
   }, []);
 
   useEffect(() => {
-    if (!editorRef.current || !monacoRef.current) return undefined;
+    if (!editorReady || !editorRef.current || !monacoRef.current) return undefined;
 
     return attachLanguageServer(monacoRef.current, editorRef.current, language, (state, detail) => {
       setLspStatus({ state, detail });
     });
-  }, [language]);
+  }, [editorReady, language]);
 
   return (
     <div className="h-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-panel">
       <div className="flex h-10 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 text-xs text-slate-400">
-        <span className="font-mono text-slate-200">main.{language.extension}</span>
+        <span className="font-mono text-slate-200">{fileName}</span>
         <span className="hidden md:inline">Ctrl+Space IntelliSense · Scanner-aware Java autocomplete · Ctrl+Enter Run</span>
         <span
           title={lspStatus.detail}
@@ -80,7 +84,7 @@ export function CodeEditor() {
       </div>
       <MonacoEditor
         height="calc(100% - 40px)"
-        path={`main.${language.extension}`}
+        path={fileName}
         language={language.monacoLanguage}
         value={code}
         theme="vibe-judge-dark"
@@ -97,7 +101,13 @@ export function CodeEditor() {
           lineNumbers: 'on',
           minimap: { enabled: ui.minimap },
           quickSuggestions: true,
+          parameterHints: { enabled: true },
           scrollBeyondLastLine: false,
+          suggest: {
+            preview: true,
+            showInlineDetails: true,
+            showStatusBar: true,
+          },
           snippetSuggestions: 'top',
           smoothScrolling: true,
           tabSize: 2,
