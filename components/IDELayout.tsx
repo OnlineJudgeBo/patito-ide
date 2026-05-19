@@ -103,7 +103,7 @@ export function IDELayout() {
   const startResize = (event: PointerEvent<HTMLDivElement>) => {
     const startY = event.clientY;
     const startHeight = ui.bottomPanelHeight;
-    const onMove = (moveEvent: PointerEvent) => setBottomPanelHeight(Math.min(520, Math.max(220, startHeight - (moveEvent.clientY - startY))));
+    const onMove = (moveEvent: globalThis.PointerEvent) => setBottomPanelHeight(Math.min(520, Math.max(220, startHeight - (moveEvent.clientY - startY))));
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);

@@ -48,7 +48,7 @@ NEXT_PUBLIC_JUDGE_WS_URL="wss://your-judge-api.example.com"
 
 ## Optional free LSP integration
 
-The frontend can connect Monaco to free/open-source language servers through browser-accessible JSON-RPC WebSocket bridges. This repository still does **not** run language servers itself; deploy them separately and expose one WebSocket endpoint per language.
+The frontend can connect Monaco to free/open-source language servers through browser-accessible JSON-RPC WebSocket bridges. The frontend-side LSP code lives in `lsp/`, with one descriptor per language integration and one shared browser WebSocket client. This repository still does **not** run language servers itself; deploy them separately and expose one WebSocket endpoint per language.
 
 Supported LSP backends:
 
@@ -71,6 +71,24 @@ NEXT_PUBLIC_LSP_GO_WS="ws://localhost:3001/lsp/go"
 ```
 
 When an endpoint is configured, the editor sends `initialize`, `textDocument/didOpen`, `textDocument/didChange`, `textDocument/completion`, and consumes `textDocument/publishDiagnostics`. Snippet autocomplete still works when no LSP endpoint is configured.
+
+### Run the local LSP bridge
+
+This repo includes a Dockerized WebSocket-to-stdio bridge in `lsp/`. It exposes all expected routes on port `3001` and starts the underlying language servers inside the container.
+
+```bash
+npm run lsp:up
+```
+
+Useful commands:
+
+```bash
+npm run lsp:logs
+npm run lsp:down
+curl http://localhost:3001/healthz
+```
+
+The bridge mounts `lsp/server/workspace` as `/workspace`, matching editor document URIs such as `file:///workspace/main.cpp`. See `lsp/README.md` for command overrides and runtime details.
 
 ## Project structure
 

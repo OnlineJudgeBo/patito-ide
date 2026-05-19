@@ -76,16 +76,21 @@ function toCompletionItem(monaco: MonacoApi, snippet: SnippetDefinition, range: 
     detail: snippet.detail,
     insertText: snippet.insertText,
     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+    sortText: `9_${snippet.label}`,
     range,
   };
+}
+
+function receiverBeforeCursor(model: Monaco.editor.ITextModel, position: Monaco.Position) {
+  const linePrefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
+  return linePrefix.match(/([A-Za-z_$][\w$]*)\.\w*$/)?.[1];
 }
 
 function javaContextualSuggestions(monaco: MonacoApi, model: Monaco.editor.ITextModel, position: Monaco.Position) {
   const source = model.getValue();
   const range = wordRange(monaco, model, position);
-  const linePrefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
   const variables = scannerVariables(source);
-  const receiver = linePrefix.match(/([A-Za-z_$][\w$]*)\.\w*$/)?.[1];
+  const receiver = receiverBeforeCursor(model, position);
 
   if (receiver && variables.includes(receiver)) {
     return scannerMethodSnippets.map((snippet) => toCompletionItem(monaco, snippet, range));
@@ -122,7 +127,8 @@ export function registerCompetitiveCompletions(monaco: MonacoApi) {
       triggerCharacters: ['.', '#', '<', '(', ' ', 'S'],
       provideCompletionItems: (model, position) => {
         const range = wordRange(monaco, model, position);
-        const suggestions = snippets.map((snippet) => toCompletionItem(monaco, snippet, range));
+        const javaReceiver = monacoLanguage === 'java' ? receiverBeforeCursor(model, position) : undefined;
+        const suggestions = javaReceiver ? [] : snippets.map((snippet) => toCompletionItem(monaco, snippet, range));
 
         if (monacoLanguage === 'java') {
           suggestions.push(...javaContextualSuggestions(monaco, model, position));

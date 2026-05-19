@@ -8,7 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lsp:up": "docker compose -f lsp/docker-compose.yml up --build",
+    "lsp:down": "docker compose -f lsp/docker-compose.yml down",
+    "lsp:logs": "docker compose -f lsp/docker-compose.yml logs -f",
+    "lsp:cache": "node lsp/scripts/cache-runtime.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
