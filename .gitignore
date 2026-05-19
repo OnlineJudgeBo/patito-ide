@@ -6,3 +6,13 @@ node_modules/
 .DS_Store
 *.log
 tsconfig.tsbuildinfo
+
+# Local LSP runtime state
+lsp/.omx/
+lsp/server/workspace/
+!lsp/server/workspace/.gitkeep
+
+# Cached LSP runtime archives (keep docs/placeholders)
+lsp/storage/*.tar.gz
+!lsp/storage/README.md
+!lsp/storage/.gitkeep
