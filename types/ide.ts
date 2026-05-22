@@ -11,58 +11,69 @@ export type Verdict =
   | 'Pending'
   | 'Internal Error';
 
+export type ColorTheme = 'dark' | 'light' | 'hacker';
+export type BottomPanel = 'output' | 'input' | 'testcases';
+
 export type LanguageDefinition = {
-  id: LanguageId;
-  label: string;
-  monacoLanguage: string;
-  judgeLanguage: string;
-  extension: string;
-  defaultCode: string;
+  readonly id: LanguageId;
+  readonly label: string;
+  readonly monacoLanguage: string;
+  readonly judgeLanguage: string;
+  readonly extension: string;
+  readonly defaultCode: string;
 };
 
 export type ExecutionResult = {
-  id?: string;
-  phase: ExecutionPhase;
-  verdict: Verdict;
-  stdout: string;
-  stderr: string;
-  compileErrors: string;
-  logs: string[];
-  runtimeMs?: number;
-  memoryKb?: number;
+  readonly id?: string;
+  readonly phase: ExecutionPhase;
+  readonly verdict: Verdict;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly compileErrors: string;
+  readonly logs: readonly string[];
+  readonly runtimeMs?: number;
+  readonly memoryKb?: number;
 };
 
 export type TestcaseStatus = 'idle' | 'running' | 'passed' | 'failed' | 'error';
 
 export type Testcase = {
-  id: string;
-  name: string;
-  input: string;
-  expectedOutput: string;
-  actualOutput?: string;
-  status: TestcaseStatus;
-  expanded: boolean;
+  readonly id: string;
+  readonly name: string;
+  readonly input: string;
+  readonly expectedOutput: string;
+  readonly actualOutput?: string;
+  readonly status: TestcaseStatus;
+  readonly expanded: boolean;
+};
+
+export type UISettings = {
+  readonly bottomPanelHeight: number;
+  readonly colorTheme: ColorTheme;
+  readonly minimap: boolean;
+  readonly sidebarWidth: number;
+  readonly sidebarCollapsed: boolean;
 };
 
 export type RunPayload = {
-  sourceCode: string;
-  language: LanguageId;
-  stdin: string;
-  testcases?: Testcase[];
+  readonly sourceCode: string;
+  readonly language: LanguageId;
+  readonly stdin: string;
+  readonly testcases?: readonly Testcase[];
 };
 
 export type SubmissionPayload = RunPayload & {
-  problemId?: string;
+  readonly problemId?: string;
 };
 
 export type SubmissionStatusMessage = {
-  submissionId: string;
-  phase: ExecutionPhase;
-  verdict?: Verdict;
-  stdout?: string;
-  stderr?: string;
-  compileErrors?: string;
-  logs?: string[];
-  runtimeMs?: number;
-  memoryKb?: number;
+  readonly submissionId: string;
+  readonly phase: ExecutionPhase;
+  readonly verdict?: Verdict;
+  readonly stdout?: string;
+  readonly stderr?: string;
+  readonly compileErrors?: string;
+  readonly logs?: readonly string[];
+  readonly runtimeMs?: number;
+  readonly memoryKb?: number;
 };

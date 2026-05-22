@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { errorMessage } from '@/lib/errors';
+import { parseSubmissionStatusMessage } from '@/lib/execution-message';
 import { judgeWebSocketUrl } from '@/services/judge-api';
 import { useIDEStore } from '@/store/ide-store';
-import type { SubmissionStatusMessage } from '@/types/ide';
 
 export function useExecutionSocket(submissionId?: string) {
   const socketRef = useRef<WebSocket | null>(null);
@@ -13,12 +14,26 @@ export function useExecutionSocket(submissionId?: string) {
   useEffect(() => {
     if (!submissionId) return undefined;
 
-    const socket = new WebSocket(judgeWebSocketUrl(submissionId));
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(judgeWebSocketUrl(submissionId));
+    } catch (error) {
+      addLog(errorMessage(error, 'Could not create judge WebSocket connection.'));
+      return undefined;
+    }
+
     socketRef.current = socket;
 
     socket.addEventListener('open', () => addLog(`WebSocket connected for submission ${submissionId}.`));
     socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data) as SubmissionStatusMessage;
+      const parsedData = safeParseJson(event.data);
+      const message = parseSubmissionStatusMessage(parsedData);
+
+      if (!message) {
+        addLog('Received an invalid judge WebSocket message. Ignoring it.');
+        return;
+      }
+
       setExecution({
         id: message.submissionId,
         phase: message.phase,
@@ -31,7 +46,7 @@ export function useExecutionSocket(submissionId?: string) {
         memoryKb: message.memoryKb,
       });
     });
-    socket.addEventListener('error', () => addLog('WebSocket error. Falling back to HTTP polling is recommended by your judge backend.'));
+    socket.addEventListener('error', () => addLog('WebSocket error. HTTP polling is not available in this client yet.'));
     socket.addEventListener('close', () => addLog('WebSocket connection closed.'));
 
     return () => {
@@ -41,4 +56,12 @@ export function useExecutionSocket(submissionId?: string) {
   }, [addLog, setExecution, submissionId]);
 
   return socketRef;
+}
+
+function safeParseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
 }

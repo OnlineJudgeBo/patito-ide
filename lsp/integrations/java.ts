@@ -6,5 +6,5 @@ export const javaLspIntegration = {
   description: 'Open-source Java LSP with Scanner/class/member completions, diagnostics and symbols.',
   envKey: 'NEXT_PUBLIC_LSP_JAVA_WS',
   server: 'jdtls',
-  websocketUrl: process.env.NEXT_PUBLIC_LSP_JAVA_WS,
+websocketUrl: process.env.NEXT_PUBLIC_LSP_JAVA_WS,
 } satisfies LanguageServerIntegration;

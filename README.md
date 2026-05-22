@@ -1,119 +1,277 @@
 # Vibe Judge IDE
 
-A modern competitive-programming web IDE built with **React**, **Next.js App Router**, **Tailwind CSS**, **TypeScript**, **Monaco Editor**, **Zustand**, **Framer Motion**, and a WebSockets-ready judge integration layer.
+English · [Español](README.es.md)
 
-This is intentionally **not** a cloud IDE. It focuses on the workflow competitors need: write one solution, test against custom stdin/testcases, run, submit, and read verdicts quickly.
+Vibe Judge IDE is a browser-based competitive-programming IDE built with **Next.js**, **React**, **TypeScript**, **Tailwind CSS**, **Monaco Editor**, **Zustand**, and an optional Dockerized **Language Server Protocol (LSP)** bridge.
+
+It is designed for judge integrations: write one solution file, get editor intelligence, run with custom input or testcases, submit to a judge API, and stream verdict updates back into the UI.
+
+## Projects
+
+This repository contains two closely related projects:
+
+| Project | Path | Purpose |
+| --- | --- | --- |
+| Web IDE | repository root | Next.js application, Monaco editor, UI state, judge API integration and browser-side LSP client |
+| LSP runtime | [`lsp/`](lsp/README.md) | WebSocket-to-stdio bridge that starts real language servers in Docker |
 
 ## Features
 
-- VSCode/Judge0/USACO-inspired dark IDE layout.
-- Monaco Editor with syntax highlighting, line numbers, autoclosing brackets, snippets, IntelliSense hooks, Scanner-aware Java completions, optional minimap, and optional LSP-backed completions/diagnostics.
-- Supported languages: C++, Python, Java, JavaScript, Rust, and Go, with competitive-programming snippets per language.
-- Top toolbar with language selector, Run, Submit, execution phase, verdict, runtime, and memory.
-- Resizable bottom panel with Output, Input, and Testcases tabs.
-- Output sections for stdout, stderr, compile errors, logs, and verdict colors.
-- Expandable testcase manager with expected input, expected output, actual output, and visual status.
-- Keyboard shortcuts:
-  - `Ctrl/Cmd + Enter` → Run
-  - `Ctrl/Cmd + Shift + Enter` → Submit
-  - `Ctrl/Cmd + S` → save locally
-- Local persistence for code, selected language, stdin, testcases, and UI preferences.
-- Framer Motion transitions, toast notifications, loading states, and a responsive layout.
+| Area | Capability |
+| --- | --- |
+| Editor | Monaco Editor, snippets, LSP completions, hover, diagnostics, signatures and code actions |
+| Languages | C++17, Python 3, Java 17, JavaScript, Rust and Go |
+| Problem view | Spanish problem statement panel with a draggable divider between statement and editor |
+| Panels | Resizable output/input/testcase panel |
+| Themes | Dark, light and hacker terminal themes |
+| Persistence | Code, selected language, testcases, layout sizes and theme are persisted locally |
+| Judge | HTTP run/submit calls plus WebSocket submission status stream |
+| LSP auth | Optional token between browser and LSP bridge |
 
-## Frontend-only judge integration
+## Screenshots
 
-The app is prepared for an external judge backend. It does **not** implement a backend, Linux terminal, shell, Docker, Git integration, or a complex file workspace.
+| IDE workspace | Completion UI | LSP status and panels |
+| --- | --- | --- |
+| ![Vibe Judge IDE workspace](docs/assets/ide-overview.png) | ![Monaco completion suggestions](docs/assets/monaco-completion.png) | ![LSP indicator and output panels](docs/assets/lsp-and-panels.png) |
 
-Expected HTTP endpoints:
+## Architecture
 
-```txt
-POST /run
-POST /submit
-GET /submission/:id
+```mermaid
+flowchart LR
+  User[Developer in browser]
+  UI[Next.js IDE UI]
+  Monaco[Monaco Editor]
+  Store[Zustand persisted state]
+  Judge[Judge HTTP + WebSocket API]
+  LSPClient[Browser LSP client]
+  Bridge[LSP WebSocket bridge]
+  Servers[clangd / pyright / jdtls / rust-analyzer / gopls / tsserver]
+
+  User --> UI
+  UI --> Store
+  UI --> Monaco
+  UI --> Judge
+  Monaco --> LSPClient
+  LSPClient -->|JSON-RPC over WS| Bridge
+  Bridge -->|LSP over stdio| Servers
 ```
 
-Expected WebSocket stream:
+## LSP Flow
 
-```txt
-WS /submission/:id
+```mermaid
+sequenceDiagram
+  participant E as Monaco Editor
+  participant C as BrowserLspClient
+  participant B as LSP Bridge
+  participant S as Language Server
+
+  E->>C: didOpen / didChange / completion
+  C->>B: WebSocket JSON-RPC message
+  B->>S: Content-Length LSP stdio frame
+  S-->>B: LSP response / diagnostics
+  B-->>C: WebSocket JSON-RPC message
+  C-->>E: Monaco suggestions, hovers, markers
 ```
 
-Configure endpoints with:
+## Judge Flow
+
+```mermaid
+sequenceDiagram
+  participant UI as IDELayout
+  participant API as Judge API
+  participant WS as Judge WebSocket
+  participant Panels as Output/Testcase Panels
+
+  UI->>API: POST /run or POST /submit
+  API-->>UI: result, runId or submissionId
+  UI->>WS: connect /submission/:id
+  WS-->>UI: phase, verdict, logs, stdout, stderr
+  UI-->>Panels: update execution state
+```
+
+## Folder Structure
+
+| Path | Purpose |
+| --- | --- |
+| `app/` | Next.js App Router entry points and global styles |
+| `components/` | IDE layout, editor, toolbar, panels and buttons |
+| `hooks/` | Keyboard shortcuts and execution WebSocket handling |
+| `lib/` | Language metadata, editor snippets and LSP config exports |
+| `lsp/` | Browser LSP client, Monaco adapter, language descriptors and Docker LSP bridge |
+| `services/` | Judge API client |
+| `store/` | Zustand store with persisted IDE state |
+| `types/` | Shared TypeScript contracts |
+
+## Requirements
+
+- Node.js 20+ recommended
+- npm 10+
+- Docker and Docker Compose for the local LSP bridge
+- A judge backend if you want real run/submit execution
+
+## Quick Start
 
 ```bash
-NEXT_PUBLIC_JUDGE_API_URL="https://your-judge-api.example.com"
-NEXT_PUBLIC_JUDGE_WS_URL="wss://your-judge-api.example.com"
+git clone <repo-url>
+cd vibe-ide
+npm install
+cp .env.example .env.local
+npm run dev
 ```
 
+Open <http://localhost:3000>.
 
-## Optional free LSP integration
+## Add the LSP Bridge
 
-The frontend can connect Monaco to free/open-source language servers through browser-accessible JSON-RPC WebSocket bridges. The frontend-side LSP code lives in `lsp/`, with one descriptor per language integration and one shared browser WebSocket client. This repository still does **not** run language servers itself; deploy them separately and expose one WebSocket endpoint per language.
-
-Supported LSP backends:
-
-- Java → Eclipse JDT Language Server
-- C++ → clangd
-- Python → Pyright
-- JavaScript → typescript-language-server
-- Rust → rust-analyzer
-- Go → gopls
-
-Configure them with:
-
-```bash
-NEXT_PUBLIC_LSP_JAVA_WS="ws://localhost:3001/lsp/java"
-NEXT_PUBLIC_LSP_CPP_WS="ws://localhost:3001/lsp/cpp"
-NEXT_PUBLIC_LSP_PYTHON_WS="ws://localhost:3001/lsp/python"
-NEXT_PUBLIC_LSP_JAVASCRIPT_WS="ws://localhost:3001/lsp/js"
-NEXT_PUBLIC_LSP_RUST_WS="ws://localhost:3001/lsp/rust"
-NEXT_PUBLIC_LSP_GO_WS="ws://localhost:3001/lsp/go"
-```
-
-When an endpoint is configured, the editor sends `initialize`, `textDocument/didOpen`, `textDocument/didChange`, `textDocument/completion`, and consumes `textDocument/publishDiagnostics`. Snippet autocomplete still works when no LSP endpoint is configured.
-
-### Run the local LSP bridge
-
-This repo includes a Dockerized WebSocket-to-stdio bridge in `lsp/`. It exposes all expected routes on port `3001` and starts the underlying language servers inside the container.
+Start the Dockerized LSP runtime from the repository root:
 
 ```bash
 npm run lsp:up
 ```
 
-Useful commands:
+Or detached:
 
 ```bash
+npm run lsp:up:detached
 npm run lsp:logs
-npm run lsp:down
+```
+
+Check health:
+
+```bash
 curl http://localhost:3001/healthz
 ```
 
-The bridge mounts `lsp/server/workspace` as `/workspace`, matching editor document URIs such as `file:///workspace/main.cpp`. See `lsp/README.md` for command overrides and runtime details.
+See the dedicated LSP documentation:
 
-## Project structure
+- [English LSP README](lsp/README.md)
+- [Spanish LSP README](lsp/README.es.md)
+
+## Environment Variables
+
+| Variable | Required | Description | Example |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_JUDGE_API_URL` | No | Base HTTP URL for the judge API. | `http://localhost:8080` |
+| `NEXT_PUBLIC_JUDGE_WS_URL` | No | Base WebSocket URL for judge status. If omitted, it is derived from the HTTP URL. | `ws://localhost:8080` |
+| `LSP_AUTH_TOKEN` | Yes for LSP | Private token used only by the Next.js LSP proxy when calling the external LSP server. Do not expose it with `NEXT_PUBLIC_*`. | `dev-lsp-token` |
+| `LSP_SERVER_WS_BASE` | No | External LSP server WebSocket base URL reached by the Next.js proxy. | `ws://127.0.0.1:3001` |
+| `NEXT_PUBLIC_LSP_CPP_WS` | No | Same-origin Next.js proxy endpoint for C++ `clangd`. | `/api/lsp/cpp` |
+| `NEXT_PUBLIC_LSP_PYTHON_WS` | No | Same-origin Next.js proxy endpoint for Python `pyright`. | `/api/lsp/python` |
+| `NEXT_PUBLIC_LSP_JAVA_WS` | No | Same-origin Next.js proxy endpoint for Java `jdtls`. | `/api/lsp/java` |
+| `NEXT_PUBLIC_LSP_JAVASCRIPT_WS` | No | Same-origin Next.js proxy endpoint for JavaScript/TypeScript. | `/api/lsp/js` |
+| `NEXT_PUBLIC_LSP_RUST_WS` | No | Same-origin Next.js proxy endpoint for Rust `rust-analyzer`. | `/api/lsp/rust` |
+| `NEXT_PUBLIC_LSP_GO_WS` | No | Same-origin Next.js proxy endpoint for Go `gopls`. | `/api/lsp/go` |
+
+The browser connects to this Next.js app at `/api/lsp/*`. The Next.js WebSocket proxy then connects to the external LSP server with the private `LSP_AUTH_TOKEN`, so no LSP secret is bundled into Monaco.
+
+## Example `.env.local`
+
+```env
+NEXT_PUBLIC_JUDGE_API_URL="http://localhost:8080"
+NEXT_PUBLIC_JUDGE_WS_URL="ws://localhost:8080"
+
+NEXT_PUBLIC_LSP_CPP_WS="/api/lsp/cpp"
+NEXT_PUBLIC_LSP_PYTHON_WS="/api/lsp/python"
+NEXT_PUBLIC_LSP_JAVA_WS="/api/lsp/java"
+NEXT_PUBLIC_LSP_JAVASCRIPT_WS="/api/lsp/js"
+NEXT_PUBLIC_LSP_RUST_WS="/api/lsp/rust"
+NEXT_PUBLIC_LSP_GO_WS="/api/lsp/go"
+
+LSP_AUTH_TOKEN="dev-lsp-token"
+LSP_SERVER_WS_BASE="ws://127.0.0.1:3001"
+```
+
+## Judge API Contract
+
+The frontend expects:
 
 ```txt
-app/          Next.js App Router pages and global styles
-components/   IDE UI components
-hooks/        Keyboard shortcuts and WebSocket status stream
-lib/          Language definitions and verdict utilities
-services/     External judge API client
-store/        Zustand IDE state and persistence
-types/        Shared TypeScript contracts
+POST /run
+POST /submit
+GET  /submission/:id
+WS   /submission/:id
 ```
 
-## Development
+### `POST /run`
 
-```bash
-npm install
-npm run dev
+```json
+{
+  "sourceCode": "#include <bits/stdc++.h>...",
+  "language": "cpp",
+  "stdin": "5\n",
+  "testcases": []
+}
 ```
 
-## Checks
-
-```bash
-npm run typecheck
-npm run build
+```json
+{
+  "runId": "run_123",
+  "result": {
+    "id": "run_123",
+    "phase": "completed",
+    "verdict": "Accepted",
+    "stdout": "5\n",
+    "stderr": "",
+    "compileErrors": "",
+    "logs": ["Finished."],
+    "runtimeMs": 12,
+    "memoryKb": 4096
+  }
+}
 ```
 
-> Note: this environment may block npm registry access. If install fails with a registry 403, run the checks in an environment that can install the dependencies listed in `package.json`.
+### `POST /submit`
+
+```json
+{ "submissionId": "sub_123" }
+```
+
+### WebSocket Status
+
+```json
+{
+  "submissionId": "sub_123",
+  "phase": "running",
+  "verdict": "Pending",
+  "logs": ["Compiling..."]
+}
+```
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the Next.js development server |
+| `npm run build` | Build the production app |
+| `npm run start` | Start the production server after build |
+| `npm run typecheck` | Run TypeScript without emitting files |
+| `npm run check` | Run typecheck and production build |
+| `npm run lsp:up` | Build and run the Dockerized LSP bridge |
+| `npm run lsp:up:detached` | Run the LSP bridge in the background |
+| `npm run lsp:logs` | Follow LSP bridge logs |
+| `npm run lsp:down` | Stop the LSP bridge |
+| `npm run lsp:cache` | Pre-download large LSP runtime archives into `lsp/storage/` |
+
+## Add a Language
+
+1. Add the language id to `types/ide.ts`.
+2. Add display metadata and starter code in `lib/languages.ts`.
+3. Add an LSP descriptor in `lsp/integrations/<language>.ts`.
+4. Register it in `lsp/integrations/index.ts`.
+5. Add a bridge route and command in `lsp/server/server.mjs`.
+6. Document the new `NEXT_PUBLIC_LSP_*_WS` variable.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `LSP: <server>` shows disabled | Missing `NEXT_PUBLIC_LSP_*_WS` variable | Copy `.env.example` to `.env.local` and restart Next.js |
+| LSP disconnects immediately | Port conflict, private token mismatch, or unsupported route | Check `LSP_AUTH_TOKEN`, `LSP_SERVER_WS_BASE`, external `/healthz`, and `npm run lsp:logs` |
+| Java completions fail | `jdtls` expects `Main.java` for the default template | Keep `lsp/document-uri.ts` aligned with the Java template |
+| C++ diagnostics are noisy | `clangd` needs compile flags | Customize `/workspace/compile_flags.txt` |
+| Run/Submit fails | Judge API does not implement the expected contract | Verify `NEXT_PUBLIC_JUDGE_API_URL` and backend routes |
+| WebSocket verdicts do not arrive | Judge WS URL is wrong or blocked | Set `NEXT_PUBLIC_JUDGE_WS_URL` explicitly and inspect the browser network tab |
+
+## License
+
+Add a license before publishing this repository as open source.

@@ -41,15 +41,15 @@ export function TestcasePanel() {
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-slate-800">
                   <div className="grid gap-2 p-3 lg:grid-cols-3">
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Input esperado
+                      Input
                       <textarea value={testcase.input} onChange={(event) => updateTestcase(testcase.id, { input: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Output esperado
+                      Expected output
                       <textarea value={testcase.expectedOutput} onChange={(event) => updateTestcase(testcase.id, { expectedOutput: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Output obtenido
+                      Actual output
                       <textarea value={testcase.actualOutput ?? ''} onChange={(event) => updateTestcase(testcase.id, { actualOutput: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                   </div>

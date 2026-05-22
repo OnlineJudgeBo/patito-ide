@@ -1,47 +1,54 @@
+import { requestJson } from '@/services/http-client';
 import type { ExecutionResult, RunPayload, SubmissionPayload, SubmissionStatusMessage } from '@/types/ide';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_JUDGE_API_URL ?? 'https://judge.example.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_JUDGE_API_URL;
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  });
+type RunResponse = {
+  readonly runId: string;
+  readonly result?: ExecutionResult;
+};
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Judge API request failed with ${response.status}`);
-  }
+type SubmitResponse = {
+  readonly submissionId: string;
+};
 
-  return response.json() as Promise<T>;
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/$/, '');
 }
 
-export async function runCode(payload: RunPayload): Promise<{ runId: string; result?: ExecutionResult }> {
-  return request('/run', {
+function endpoint(path: string) {
+  return `${trimTrailingSlash(API_BASE_URL)}${path}`;
+}
+
+export async function runCode(payload: RunPayload): Promise<RunResponse> {
+  return requestJson(endpoint('/run'), {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export async function submitCode(payload: SubmissionPayload): Promise<{ submissionId: string }> {
-  return request('/submit', {
+export async function submitCode(payload: SubmissionPayload): Promise<SubmitResponse> {
+  return requestJson(endpoint('/submit'), {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
 export async function getSubmission(submissionId: string): Promise<SubmissionStatusMessage> {
-  return request(`/submission/${submissionId}`);
+  return requestJson(endpoint(`/submission/${submissionId}`));
 }
 
 export function judgeWebSocketUrl(submissionId: string) {
   const configured = process.env.NEXT_PUBLIC_JUDGE_WS_URL;
-  if (configured) return `${configured.replace(/\/$/, '')}/submission/${submissionId}`;
+  if (configured) return `${trimTrailingSlash(configured)}/submission/${submissionId}`;
 
-  const httpUrl = new URL(API_BASE_URL);
+  let httpUrl: URL;
+  try {
+    httpUrl = new URL(API_BASE_URL);
+  } catch {
+    throw new Error('NEXT_PUBLIC_JUDGE_API_URL must be an absolute http(s) URL when NEXT_PUBLIC_JUDGE_WS_URL is not set.');
+  }
+
   httpUrl.protocol = httpUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${httpUrl.toString().replace(/\/$/, '')}/submission/${submissionId}`;
+  return `${trimTrailingSlash(httpUrl.toString())}/submission/${submissionId}`;
 }

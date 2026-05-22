@@ -6,6 +6,14 @@
   color-scheme: dark;
 }
 
+:root:has(.theme-light) {
+  color-scheme: light;
+}
+
+:root:has(.theme-hacker) {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -33,10 +41,243 @@ input {
   touch-action: none;
 }
 
+.vertical-resize-handle {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.theme-light {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light [class*="bg-slate-950"],
+.theme-light [class*="bg-slate-900"] {
+  background-color: #ffffff !important;
+}
+
+.theme-light [class*="bg-slate-900/"],
+.theme-light [class*="bg-slate-950/"] {
+  background-color: rgb(255 255 255 / 0.88) !important;
+}
+
+.theme-light [class*="bg-sky-400/10"] {
+  background-color: rgb(224 242 254 / 0.85) !important;
+}
+
+.theme-light [class*="border-slate-800"],
+.theme-light [class*="border-slate-700"] {
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light [class*="text-slate-100"],
+.theme-light [class*="text-slate-200"],
+.theme-light [class*="text-slate-300"],
+.theme-light [class*="text-slate-400"],
+.theme-light [class*="text-white"] {
+  color: #0f172a !important;
+}
+
+.theme-light [class*="text-slate-500"],
+.theme-light [class*="text-slate-600"] {
+  color: #475569 !important;
+}
+
+.theme-light [class*="text-sky-100"],
+.theme-light [class*="text-sky-200"],
+.theme-light [class*="text-sky-300"] {
+  color: #0369a1 !important;
+}
+
+.theme-light [class*="text-emerald-100"],
+.theme-light [class*="text-emerald-200"],
+.theme-light [class*="text-emerald-300"] {
+  color: #047857 !important;
+}
+
+.theme-light [class*="text-amber-200"],
+.theme-light [class*="text-amber-300"] {
+  color: #92400e !important;
+}
+
+.theme-light textarea,
+.theme-light select,
+.theme-light input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.theme-light .resize-handle,
+.theme-light .vertical-resize-handle {
+  background-color: #e2e8f0 !important;
+}
+
+.theme-light .shadow-glow,
+.theme-light .shadow-panel {
+  box-shadow: 0 18px 44px rgb(15 23 42 / 0.10) !important;
+}
+
+.theme-hacker {
+  background:
+    linear-gradient(rgb(0 255 102 / 0.035) 50%, rgb(0 0 0 / 0.12) 50%),
+    radial-gradient(circle at top left, rgb(57 255 20 / 0.14), transparent 34rem),
+    #000805 !important;
+  background-size: 100% 4px, auto, auto !important;
+  color: #b7ffcf !important;
+  text-shadow: 0 0 8px rgb(57 255 20 / 0.20);
+}
+
+.theme-hacker [class*="bg-slate-950"],
+.theme-hacker [class*="bg-slate-900"] {
+  background-color: #000b05 !important;
+}
+
+.theme-hacker [class*="bg-slate-900/"],
+.theme-hacker [class*="bg-slate-950/"] {
+  background-color: rgb(0 11 5 / 0.94) !important;
+}
+
+.theme-hacker [class*="bg-sky-400/10"],
+.theme-hacker [class*="bg-emerald-400/10"] {
+  background-color: rgb(0 255 102 / 0.10) !important;
+}
+
+.theme-hacker [class*="border-slate-800"],
+.theme-hacker [class*="border-slate-700"],
+.theme-hacker [class*="border-sky-400/"],
+.theme-hacker [class*="border-emerald-400/"] {
+  border-color: #00a33c !important;
+}
+
+.theme-hacker [class*="text-slate-100"],
+.theme-hacker [class*="text-slate-200"],
+.theme-hacker [class*="text-slate-300"],
+.theme-hacker [class*="text-slate-400"],
+.theme-hacker [class*="text-white"] {
+  color: #b7ffcf !important;
+}
+
+.theme-hacker [class*="text-slate-500"],
+.theme-hacker [class*="text-slate-600"] {
+  color: #39ff14 !important;
+}
+
+.theme-hacker [class*="text-sky-100"],
+.theme-hacker [class*="text-sky-200"],
+.theme-hacker [class*="text-sky-300"],
+.theme-hacker [class*="text-emerald-100"],
+.theme-hacker [class*="text-emerald-200"],
+.theme-hacker [class*="text-emerald-300"] {
+  color: #39ff14 !important;
+}
+
+.theme-hacker [class*="text-amber-200"],
+.theme-hacker [class*="text-amber-300"] {
+  color: #b6ff00 !important;
+}
+
+.theme-hacker button,
+.theme-hacker select {
+  box-shadow: inset 0 0 0 1px rgb(57 255 20 / 0.06), 0 0 16px rgb(57 255 20 / 0.08) !important;
+}
+
+.theme-hacker button:hover {
+  background-color: rgb(0 255 102 / 0.10) !important;
+  border-color: #39ff14 !important;
+  color: #ecfccb !important;
+  box-shadow: 0 0 22px rgb(57 255 20 / 0.22) !important;
+}
+
+.theme-hacker textarea,
+.theme-hacker select,
+.theme-hacker input {
+  background-color: #000b05 !important;
+  color: #b7ffcf !important;
+}
+
+.theme-hacker .resize-handle,
+.theme-hacker .vertical-resize-handle {
+  background-color: #003b14 !important;
+}
+
+.theme-hacker .shadow-glow,
+.theme-hacker .shadow-panel {
+  box-shadow: 0 0 34px rgb(57 255 20 / 0.18), inset 0 0 22px rgb(57 255 20 / 0.035) !important;
+}
+
+.theme-hacker section,
+.theme-hacker aside,
+.theme-hacker header,
+.theme-hacker article {
+  border-color: #00a33c !important;
+}
+
+.theme-hacker pre,
+.theme-hacker .font-mono {
+  text-shadow: 0 0 8px rgb(57 255 20 / 0.24);
+}
+
 .monaco-editor,
 .monaco-editor-background,
 .monaco-editor .inputarea.ime-input {
   background-color: #0b1220 !important;
+}
+
+.theme-light .monaco-editor,
+.theme-light .monaco-editor-background,
+.theme-light .monaco-editor .inputarea.ime-input {
+  background-color: #ffffff !important;
+}
+
+.theme-hacker .monaco-editor,
+.theme-hacker .monaco-editor-background,
+.theme-hacker .monaco-editor .inputarea.ime-input {
+  background-color: #000b05 !important;
+}
+
+.theme-hacker .monaco-editor {
+  box-shadow: inset 0 0 26px rgb(57 255 20 / 0.06);
+}
+
+.theme-hacker .monaco-editor .view-overlays::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(57 255 20 / 0.035) 0,
+    rgb(57 255 20 / 0.035) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
+.monaco-editor .suggest-widget {
+  z-index: 1000;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row.focused,
+.monaco-editor .suggest-widget .monaco-list-row.selected {
+  background-color: #075985 !important;
+  color: #f8fafc !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row.focused .highlight,
+.monaco-editor .suggest-widget .monaco-list-row.selected .highlight {
+  color: #fde68a !important;
+}
+
+.theme-hacker .monaco-editor .suggest-widget .monaco-list-row.focused,
+.theme-hacker .monaco-editor .suggest-widget .monaco-list-row.selected {
+  background-color: #064e3b !important;
+  color: #ecfccb !important;
+}
+
+.theme-hacker .monaco-editor .suggest-widget .monaco-list-row.focused .highlight,
+.theme-hacker .monaco-editor .suggest-widget .monaco-list-row.selected .highlight {
+  color: #b6ff00 !important;
 }
 
 ::-webkit-scrollbar {

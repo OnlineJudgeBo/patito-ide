@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname } from 'node:path';
@@ -11,6 +12,12 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 const WORKSPACE = process.env.LSP_WORKSPACE ?? '/workspace';
 const JDTLS_WORKSPACE = process.env.JDTLS_WORKSPACE ?? '/tmp/jdtls-workspace';
 const REQUEST_TIMEOUT_MS = Number(process.env.LSP_PROCESS_EXIT_GRACE_MS ?? 1500);
+const LSP_AUTH_TOKEN = process.env.LSP_AUTH_TOKEN?.trim();
+
+if (!LSP_AUTH_TOKEN) {
+  console.error('LSP_AUTH_TOKEN is required. Refusing to start an unauthenticated LSP bridge.');
+  process.exit(1);
+}
 
 const languageServers = {
   java: {
@@ -61,6 +68,11 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (socket, request) => {
   const language = languageFromPath(request.url ?? '');
   const config = language ? languageServers[language] : undefined;
+
+  if (!isAuthorized(request)) {
+    socket.close(1008, 'Unauthorized LSP connection.');
+    return;
+  }
 
   if (!config) {
     socket.close(1008, 'Unsupported LSP route. Use /lsp/java, /lsp/cpp, /lsp/python, /lsp/js, /lsp/rust, or /lsp/go.');
@@ -123,12 +135,32 @@ wss.on('connection', (socket, request) => {
 server.listen(PORT, HOST, () => {
   console.log(`LSP WebSocket bridge listening on ws://${HOST}:${PORT}`);
   console.log('Routes: /lsp/java /lsp/cpp /lsp/python /lsp/js /lsp/rust /lsp/go');
+  console.log(`Token auth: ${LSP_AUTH_TOKEN ? 'enabled' : 'disabled'}`);
 });
 
 function languageFromPath(url) {
   const path = new URL(url, 'ws://localhost').pathname;
   const match = path.match(/^\/lsp\/(java|cpp|python|js|rust|go)$/);
   return match?.[1];
+}
+
+function isAuthorized(request) {
+  const url = new URL(request.url ?? '', 'ws://localhost');
+  const token = url.searchParams.get('token') ?? bearerToken(request.headers.authorization);
+  return tokensMatch(token, LSP_AUTH_TOKEN);
+}
+
+function bearerToken(header) {
+  const match = header?.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim();
+}
+
+function tokensMatch(candidate, expected) {
+  if (!candidate) return false;
+
+  const candidateBuffer = Buffer.from(candidate);
+  const expectedBuffer = Buffer.from(expected);
+  return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
 }
 
 function splitArgs(value) {

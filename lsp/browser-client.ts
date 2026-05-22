@@ -1,6 +1,6 @@
 import type * as Monaco from 'monaco-editor';
 import { getLanguageServerConfig } from '@/lsp/config';
-import { fallbackDocumentUri, modelDocumentUri } from '@/lsp/document-uri';
+import { workspaceDocumentUri } from '@/lsp/document-uri';
 import type { JsonRpcMessage, LspCodeAction, LspCompletionItem, LspDiagnostic, LspHover, LspMarkupContent, LspPosition, LspSignatureHelp, LspWorkspaceEdit } from '@/lsp/protocol';
 import type { LspStatus } from '@/lsp/types';
 import type { LanguageDefinition } from '@/types/ide';
@@ -67,7 +67,15 @@ function toMonacoRange(monaco: MonacoApi, range: NonNullable<LspCompletionItem['
 }
 
 function toMonacoTextEdits(monaco: MonacoApi, edits?: LspCompletionItem['additionalTextEdits']) {
-  return edits?.map((edit) => ({ range: toMonacoRange(monaco, edit.range), text: edit.newText }));
+  return edits?.map((edit) => ({ range: toMonacoRange(monaco, edit.range), text: plainCompletionText(edit.newText) }));
+}
+
+function plainCompletionText(value: string) {
+  return value
+    .replace(/\$\{\d+:([^}]+)\}/g, '$1')
+    .replace(/\$\{\d+\|([^}]+)\|\}/g, (_match, choices: string) => choices.split(',')[0] ?? '')
+    .replace(/\$\{\d+\}/g, '')
+    .replace(/\$\d+/g, '');
 }
 
 function hoverContents(contents: LspHover['contents']) {
@@ -91,6 +99,18 @@ function workspaceEditToMonaco(monaco: MonacoApi, edit?: LspWorkspaceEdit) {
   );
 
   return edits.length ? { edits } : undefined;
+}
+
+function resolveWebSocketUrl(websocketUrl: string) {
+  if (!websocketUrl.startsWith('/')) return websocketUrl;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${websocketUrl}`;
+}
+
+async function webSocketMessageToText(raw: string | ArrayBuffer | Blob) {
+  if (typeof raw === 'string') return raw;
+  if (raw instanceof ArrayBuffer) return new TextDecoder().decode(raw);
+  return raw.text();
 }
 
 export class BrowserLspClient {
@@ -123,7 +143,8 @@ export class BrowserLspClient {
 
     this.initialized = false;
     this.statusChanged('connecting', `Connecting to ${config.name}…`);
-    this.socket = new WebSocket(config.websocketUrl);
+    this.socket = new WebSocket(resolveWebSocketUrl(config.websocketUrl));
+    this.socket.binaryType = 'arraybuffer';
     this.socket.addEventListener('open', async () => {
       try {
         await this.request('initialize', {
@@ -133,7 +154,7 @@ export class BrowserLspClient {
             textDocument: {
               completion: {
                 completionItem: {
-                  snippetSupport: true,
+                  snippetSupport: false,
                   documentationFormat: ['markdown', 'plaintext'],
                   resolveSupport: { properties: ['documentation', 'detail', 'additionalTextEdits'] },
                 },
@@ -154,7 +175,9 @@ export class BrowserLspClient {
         this.statusChanged('error', error instanceof Error ? error.message : `${config.name} initialization failed.`);
       }
     });
-    this.socket.addEventListener('message', (event) => this.handleMessage(event.data));
+    this.socket.addEventListener('message', (event) => {
+      void this.handleMessage(event.data);
+    });
     this.socket.addEventListener('error', () => this.statusChanged('error', `${config.name} WebSocket error.`));
     this.socket.addEventListener('close', () => {
       this.initialized = false;
@@ -184,7 +207,7 @@ export class BrowserLspClient {
     this.pendingModel = model;
     if (!this.isReady()) return;
 
-    const uri = modelDocumentUri(model, this.language);
+    const uri = workspaceDocumentUri(this.language);
     if (!this.openedUri) {
       this.flushPendingModel();
       return;
@@ -204,7 +227,7 @@ export class BrowserLspClient {
 
   async completions(model: Monaco.editor.ITextModel, position: Monaco.Position) {
     if (!this.isReady()) return [];
-    const uri = this.openedUri ?? modelDocumentUri(model, this.language) ?? fallbackDocumentUri(this.language);
+    const uri = this.openedUri ?? workspaceDocumentUri(this.language);
     const result = await this.request('textDocument/completion', {
       textDocument: { uri },
       position: toLspPosition(position),
@@ -213,7 +236,9 @@ export class BrowserLspClient {
     const word = model.getWordUntilPosition(position);
     const range = new this.monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
 
-    return items.map((item: LspCompletionItem) => this.toMonacoCompletionItem(item, range));
+    return items
+      .map((item: LspCompletionItem) => this.toMonacoCompletionItem(item, range))
+      .filter((item): item is MonacoLspCompletionItem => Boolean(item));
   }
 
   async resolveCompletion(item: Monaco.languages.CompletionItem) {
@@ -228,10 +253,10 @@ export class BrowserLspClient {
     }
   }
 
-  async hover(model: Monaco.editor.ITextModel, position: Monaco.Position) {
+  async hover(_model: Monaco.editor.ITextModel, position: Monaco.Position) {
     if (!this.isReady()) return undefined;
     const result = (await this.request('textDocument/hover', {
-      textDocument: { uri: this.openedUri ?? modelDocumentUri(model, this.language) },
+      textDocument: { uri: this.openedUri ?? workspaceDocumentUri(this.language) },
       position: toLspPosition(position),
     })) as LspHover | null;
     const contents = hoverContents(result?.contents);
@@ -242,10 +267,10 @@ export class BrowserLspClient {
     };
   }
 
-  async signatureHelp(model: Monaco.editor.ITextModel, position: Monaco.Position) {
+  async signatureHelp(_model: Monaco.editor.ITextModel, position: Monaco.Position) {
     if (!this.isReady()) return undefined;
     const result = (await this.request('textDocument/signatureHelp', {
-      textDocument: { uri: this.openedUri ?? modelDocumentUri(model, this.language) },
+      textDocument: { uri: this.openedUri ?? workspaceDocumentUri(this.language) },
       position: toLspPosition(position),
     })) as LspSignatureHelp | null;
     const signatures = result?.signatures ?? [];
@@ -264,10 +289,10 @@ export class BrowserLspClient {
     };
   }
 
-  async codeActions(model: Monaco.editor.ITextModel, range: Monaco.Range, context: Monaco.languages.CodeActionContext) {
+  async codeActions(_model: Monaco.editor.ITextModel, range: Monaco.Range, context: Monaco.languages.CodeActionContext) {
     if (!this.isReady()) return [];
     const result = (await this.request('textDocument/codeAction', {
-      textDocument: { uri: this.openedUri ?? modelDocumentUri(model, this.language) },
+      textDocument: { uri: this.openedUri ?? workspaceDocumentUri(this.language) },
       range: {
         start: { line: range.startLineNumber - 1, character: range.startColumn - 1 },
         end: { line: range.endLineNumber - 1, character: range.endColumn - 1 },
@@ -297,8 +322,10 @@ export class BrowserLspClient {
       .filter((action) => action.edit || action.command);
   }
 
-  private toMonacoCompletionItem(item: LspCompletionItem, fallbackRange: Monaco.Range): MonacoLspCompletionItem {
-    const textEditRange = item.textEdit ? toMonacoRange(this.monaco, item.textEdit.range) : fallbackRange;
+  private toMonacoCompletionItem(item: LspCompletionItem, defaultRange: Monaco.Range): MonacoLspCompletionItem | null {
+    if (item.kind === 15) return null;
+
+    const textEditRange = item.textEdit ? toMonacoRange(this.monaco, item.textEdit.range) : defaultRange;
     return {
       label: item.label,
       kind: completionKind(this.monaco, item.kind),
@@ -306,9 +333,7 @@ export class BrowserLspClient {
       documentation: completionDocumentation(item.documentation),
       filterText: item.filterText,
       sortText: item.sortText ? `0_${item.sortText}` : '0',
-      insertText: item.textEdit?.newText ?? item.insertText ?? item.label,
-      insertTextRules:
-        item.insertTextFormat === 2 ? this.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+      insertText: plainCompletionText(item.textEdit?.newText ?? item.insertText ?? item.label),
       range: textEditRange,
       additionalTextEdits: toMonacoTextEdits(this.monaco, item.additionalTextEdits),
       lspItem: item,
@@ -321,11 +346,9 @@ export class BrowserLspClient {
     current.detail = resolved.detail ?? current.detail;
     current.documentation = completionDocumentation(resolved.documentation) ?? current.documentation;
     current.additionalTextEdits = toMonacoTextEdits(this.monaco, resolved.additionalTextEdits) ?? current.additionalTextEdits;
-    if (resolved.textEdit?.newText) current.insertText = resolved.textEdit.newText;
-    else if (resolved.insertText) current.insertText = resolved.insertText;
-    if (resolved.insertTextFormat === 2) {
-      current.insertTextRules = this.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
-    }
+    if (resolved.textEdit?.newText) current.insertText = plainCompletionText(resolved.textEdit.newText);
+    else if (resolved.insertText) current.insertText = plainCompletionText(resolved.insertText);
+    current.insertTextRules = undefined;
     return current;
   }
 
@@ -335,7 +358,7 @@ export class BrowserLspClient {
 
   private flushPendingModel() {
     if (!this.pendingModel || !this.isReady()) return;
-    const uri = modelDocumentUri(this.pendingModel, this.language);
+    const uri = workspaceDocumentUri(this.language);
     if (this.openedUri === uri) {
       this.didChange(this.pendingModel);
       return;
@@ -377,8 +400,16 @@ export class BrowserLspClient {
     this.socket.send(JSON.stringify(payload));
   }
 
-  private handleMessage(raw: string) {
-    const message = JSON.parse(raw) as JsonRpcMessage;
+  private async handleMessage(raw: string | ArrayBuffer | Blob) {
+    const text = await webSocketMessageToText(raw);
+    let message: JsonRpcMessage;
+    try {
+      message = JSON.parse(text) as JsonRpcMessage;
+    } catch (error) {
+      console.error('[lsp-client] invalid JSON-RPC message:', error);
+      return;
+    }
+
     if (typeof message.id === 'number') {
       const pending = this.pending.get(message.id);
       if (!pending) return;
