@@ -30,9 +30,17 @@ Este repositorio contiene dos proyectos relacionados:
 
 ## Capturas
 
-| Workspace del IDE | Autocompletado | Estado LSP y paneles |
-| --- | --- | --- |
-| ![Workspace de Vibe Judge IDE](docs/assets/ide-overview.png) | ![Sugerencias de Monaco](docs/assets/monaco-completion.png) | ![Indicador LSP y paneles](docs/assets/lsp-and-panels.png) |
+### Workspace del IDE
+
+![Workspace de Vibe Judge IDE](docs/assets/ide-overview.png)
+
+### Autocompletado
+
+![Sugerencias de Monaco](docs/assets/monaco-completion.png)
+
+### Estado LSP y paneles
+
+![Indicador LSP y paneles](docs/assets/lsp-and-panels.png)
 
 ## Arquitectura
 

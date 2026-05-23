@@ -30,9 +30,17 @@ This repository contains two closely related projects:
 
 ## Screenshots
 
-| IDE workspace | Completion UI | LSP status and panels |
-| --- | --- | --- |
-| ![Vibe Judge IDE workspace](docs/assets/ide-overview.png) | ![Monaco completion suggestions](docs/assets/monaco-completion.png) | ![LSP indicator and output panels](docs/assets/lsp-and-panels.png) |
+### IDE workspace
+
+![Vibe Judge IDE workspace](docs/assets/ide-overview.png)
+
+### Completion UI
+
+![Monaco completion suggestions](docs/assets/monaco-completion.png)
+
+### LSP status and panels
+
+![LSP indicator and output panels](docs/assets/lsp-and-panels.png)
 
 ## Architecture
 

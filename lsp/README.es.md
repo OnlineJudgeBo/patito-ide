@@ -6,6 +6,18 @@ Este proyecto es el runtime de inteligencia de lenguaje para Vibe Judge IDE. Inc
 
 Usalo cuando el IDE necesite autocompletado, diagnósticos, hover y comportamiento de editor con soporte de lenguaje para Java, C++, Python, JavaScript, Rust y Go.
 
+## Capturas
+
+El runtime LSP alimenta el autocompletado del editor y los indicadores de estado que se ven en el IDE principal.
+
+### Autocompletado
+
+![Sugerencias de Monaco](../docs/assets/monaco-completion.png)
+
+### Estado LSP y paneles
+
+![Indicador LSP y paneles](../docs/assets/lsp-and-panels.png)
+
 ## Cómo Se Integra
 
 El IDE en Next.js no habla directamente con los servidores de lenguaje. El navegador abre un WebSocket por lenguaje, el puente valida el token opcional y después reenvía mensajes JSON-RPC entre Monaco y el proceso del language server seleccionado.
