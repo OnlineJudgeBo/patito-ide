@@ -2,31 +2,34 @@
 
 English · [Español](README.es.md)
 
-Vibe Judge IDE is a browser-based competitive-programming IDE built with **Next.js**, **React**, **TypeScript**, **Tailwind CSS**, **Monaco Editor**, **Zustand**, and an optional Dockerized **Language Server Protocol (LSP)** bridge.
+Vibe Judge IDE is a browser-based competitive-programming workspace built with **Next.js**, **React**, **TypeScript**, **Tailwind CSS**, **Monaco Editor**, **Zustand**, and WebSocket integrations for judge and LSP workflows.
 
-It is designed for judge integrations: write one solution file, get editor intelligence, run with custom input or testcases, submit to a judge API, and stream verdict updates back into the UI.
+It is designed for online-judge platforms that need a focused coding UI: competitors can read the problem, write a single-file solution, run it with custom input or test cases, submit it to a judge backend, and follow execution status in real time.
 
-## Projects
+## What this repository contains
 
-This repository contains two closely related projects:
+This checkout contains the **web IDE**:
 
-| Project | Path | Purpose |
-| --- | --- | --- |
-| Web IDE | repository root | Next.js application, Monaco editor, UI state, judge API integration and browser-side LSP client |
-| LSP runtime | [`lsp/`](lsp/README.md) | WebSocket-to-stdio bridge that starts real language servers in Docker |
+- Next.js application shell and custom WebSocket server (`server.mjs`).
+- Monaco-based code editor.
+- Persisted UI/code state with Zustand.
+- Judge HTTP + WebSocket client integration.
+- Browser-to-server LSP proxy routes under `/api/lsp/*`.
 
-## Features
+The actual language-server runtime is expected to run separately and be reachable through `LSP_SERVER_WS_BASE` (for example `ws://127.0.0.1:3001`). Some scripts still target a local `lsp/` companion directory; they only work when that directory is present in your checkout.
+
+## Highlights
 
 | Area | Capability |
 | --- | --- |
-| Editor | Monaco Editor, LSP completions, hover, diagnostics, signatures and code actions |
-| Languages | C++17, Python 3, Java 17, JavaScript, Rust and Go |
-| Problem view | Spanish problem statement panel with a draggable divider between statement and editor |
-| Panels | Resizable output/input/testcase panel |
-| Themes | Dark, light and hacker terminal themes |
-| Persistence | Code entered by the user, selected language, testcases, layout sizes and theme are persisted locally |
-| Judge | HTTP run/submit calls plus WebSocket submission status stream |
-| LSP auth | Optional token between browser and LSP bridge |
+| Editor | Monaco Editor with language-aware file names and configurable themes |
+| Languages | C++17, Python 3, Java 17, JavaScript, Rust, and Go |
+| Problem view | Built-in Spanish problem statement panel with a draggable split view |
+| Execution UI | Separate panels for output, stdin, test cases, logs, runtime, and memory |
+| Persistence | Code, selected language, test cases, layout sizes, minimap, and theme persist locally |
+| Judge integration | `run`/`submit` HTTP calls plus WebSocket status updates |
+| LSP proxy | Browser connects to `/api/lsp/<language>` while the server forwards the private token upstream |
+| Shortcuts | `Ctrl+Enter` to run, `Ctrl+Space` for editor suggestions |
 
 ## Screenshots
 
@@ -46,42 +49,42 @@ This repository contains two closely related projects:
 
 ```mermaid
 flowchart LR
-  User[Developer in browser]
+  User[User in browser]
   UI[Next.js IDE UI]
   Monaco[Monaco Editor]
   Store[Zustand persisted state]
   Judge[Judge HTTP + WebSocket API]
-  LSPClient[Browser LSP client]
-  Bridge[LSP WebSocket bridge]
+  Proxy[Next.js WebSocket LSP proxy]
+  Runtime[External LSP runtime]
   Servers[clangd / pyright / jdtls / rust-analyzer / gopls / tsserver]
 
   User --> UI
   UI --> Store
   UI --> Monaco
   UI --> Judge
-  Monaco --> LSPClient
-  LSPClient -->|JSON-RPC over WS| Bridge
-  Bridge -->|LSP over stdio| Servers
+  Monaco -->|WS /api/lsp/*| Proxy
+  Proxy -->|Authorization header| Runtime
+  Runtime -->|stdio LSP| Servers
 ```
 
-## LSP Flow
+### LSP message flow
 
 ```mermaid
 sequenceDiagram
   participant E as Monaco Editor
-  participant C as BrowserLspClient
-  participant B as LSP Bridge
+  participant P as Next.js LSP Proxy
+  participant R as External LSP Runtime
   participant S as Language Server
 
-  E->>C: didOpen / didChange / completion
-  C->>B: WebSocket JSON-RPC message
-  B->>S: Content-Length LSP stdio frame
-  S-->>B: LSP response / diagnostics
-  B-->>C: WebSocket JSON-RPC message
-  C-->>E: Monaco suggestions, hovers, markers
+  E->>P: WebSocket JSON-RPC on /api/lsp/cpp
+  P->>R: WebSocket JSON-RPC with private Authorization token
+  R->>S: LSP stdio frame
+  S-->>R: LSP response or diagnostics
+  R-->>P: JSON-RPC response
+  P-->>E: completions, hovers, diagnostics
 ```
 
-## Judge Flow
+### Judge flow
 
 ```mermaid
 sequenceDiagram
@@ -91,33 +94,35 @@ sequenceDiagram
   participant Panels as Output/Testcase Panels
 
   UI->>API: POST /run or POST /submit
-  API-->>UI: result, runId or submissionId
+  API-->>UI: result, runId, or submissionId
   UI->>WS: connect /submission/:id
   WS-->>UI: phase, verdict, logs, stdout, stderr
-  UI-->>Panels: update execution state
+  UI-->>Panels: render execution state
 ```
 
-## Folder Structure
+## Folder structure
 
 | Path | Purpose |
 | --- | --- |
 | `app/` | Next.js App Router entry points and global styles |
-| `components/` | IDE layout, editor, toolbar, panels and buttons |
-| `hooks/` | Keyboard shortcuts and execution WebSocket handling |
-| `lib/` | Language metadata, starter main code, and LSP config exports |
-| `lsp/` | Browser LSP client, Monaco adapter, language descriptors and Docker LSP bridge |
-| `services/` | Judge API client |
-| `store/` | Zustand store with persisted IDE state |
+| `components/` | IDE layout, editor, toolbar, status badges, and panels |
+| `docs/assets/` | README screenshots |
+| `hooks/` | Keyboard shortcuts, panel resize, toast, LSP editor wiring, and judge actions |
+| `lib/` | Language metadata, UI config, verdict helpers, themes, and error formatting |
+| `services/` | HTTP, judge API, file download, and LSP client exports |
+| `store/` | Zustand store and default persisted state |
 | `types/` | Shared TypeScript contracts |
+| `server.mjs` | Custom Next.js server plus `/api/lsp/*` WebSocket proxy |
 
 ## Requirements
 
 - Node.js 20+ recommended
 - npm 10+
-- Docker and Docker Compose for the local LSP bridge
 - A judge backend if you want real run/submit execution
+- Optional: an external LSP runtime listening on `LSP_SERVER_WS_BASE`
+- Optional: Docker and Docker Compose if your checkout includes the companion `lsp/` runtime directory
 
-## Quick Start
+## Quick start
 
 ```bash
 git clone <repo-url>
@@ -129,48 +134,60 @@ npm run dev
 
 Open <http://localhost:3000>.
 
-## Add the LSP Bridge
+If you only want to inspect the UI, the judge backend and LSP runtime can be offline. Run/submit and LSP features will show connection errors until their services are available.
 
-Start the Dockerized LSP runtime from the repository root:
+## Configure the judge backend
 
-```bash
-npm run lsp:up
+The frontend expects these endpoints:
+
+```txt
+POST /run
+POST /submit
+GET  /submission/:id
+WS   /submission/:id
 ```
 
-Or detached:
+Set the judge URLs in `.env.local`:
 
-```bash
-npm run lsp:up:detached
-npm run lsp:logs
+```env
+NEXT_PUBLIC_JUDGE_API_URL="http://localhost:8080"
+NEXT_PUBLIC_JUDGE_WS_URL="ws://localhost:8080"
 ```
 
-Check health:
+If `NEXT_PUBLIC_JUDGE_WS_URL` is omitted, the app derives it from `NEXT_PUBLIC_JUDGE_API_URL`.
 
-```bash
-curl http://localhost:3001/healthz
+## Configure LSP
+
+The browser should not know the private LSP token. Monaco connects only to same-origin proxy URLs:
+
+```env
+NEXT_PUBLIC_LSP_CPP_WS="/api/lsp/cpp"
+NEXT_PUBLIC_LSP_PYTHON_WS="/api/lsp/python"
+NEXT_PUBLIC_LSP_JAVA_WS="/api/lsp/java"
+NEXT_PUBLIC_LSP_JAVASCRIPT_WS="/api/lsp/js"
+NEXT_PUBLIC_LSP_RUST_WS="/api/lsp/rust"
+NEXT_PUBLIC_LSP_GO_WS="/api/lsp/go"
 ```
 
-See the dedicated LSP documentation:
+`server.mjs` receives those WebSocket upgrades, then connects to the external LSP runtime with a private server-side token:
 
-- [English LSP README](lsp/README.md)
-- [Spanish LSP README](lsp/README.es.md)
+```env
+LSP_AUTH_TOKEN="dev-lsp-token"
+LSP_SERVER_WS_BASE="ws://127.0.0.1:3001"
+```
 
-## Environment Variables
+Do **not** rename `LSP_AUTH_TOKEN` to `NEXT_PUBLIC_*`; anything with `NEXT_PUBLIC_` is bundled into browser code.
 
-| Variable | Required | Description | Example |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_JUDGE_API_URL` | No | Base HTTP URL for the judge API. | `http://localhost:8080` |
-| `NEXT_PUBLIC_JUDGE_WS_URL` | No | Base WebSocket URL for judge status. If omitted, it is derived from the HTTP URL. | `ws://localhost:8080` |
-| `LSP_AUTH_TOKEN` | Yes for LSP | Private token used only by the Next.js LSP proxy when calling the external LSP server. Do not expose it with `NEXT_PUBLIC_*`. | `dev-lsp-token` |
-| `LSP_SERVER_WS_BASE` | No | External LSP server WebSocket base URL reached by the Next.js proxy. | `ws://127.0.0.1:3001` |
-| `NEXT_PUBLIC_LSP_CPP_WS` | No | Same-origin Next.js proxy endpoint for C++ `clangd`. | `/api/lsp/cpp` |
-| `NEXT_PUBLIC_LSP_PYTHON_WS` | No | Same-origin Next.js proxy endpoint for Python `pyright`. | `/api/lsp/python` |
-| `NEXT_PUBLIC_LSP_JAVA_WS` | No | Same-origin Next.js proxy endpoint for Java `jdtls`. | `/api/lsp/java` |
-| `NEXT_PUBLIC_LSP_JAVASCRIPT_WS` | No | Same-origin Next.js proxy endpoint for JavaScript/TypeScript. | `/api/lsp/js` |
-| `NEXT_PUBLIC_LSP_RUST_WS` | No | Same-origin Next.js proxy endpoint for Rust `rust-analyzer`. | `/api/lsp/rust` |
-| `NEXT_PUBLIC_LSP_GO_WS` | No | Same-origin Next.js proxy endpoint for Go `gopls`. | `/api/lsp/go` |
+Expected upstream routes from the external LSP runtime:
 
-The browser connects to this Next.js app at `/api/lsp/*`. The Next.js WebSocket proxy then connects to the external LSP server with the private `LSP_AUTH_TOKEN`, so no LSP secret is bundled into Monaco.
+```txt
+/lsp/java
+/lsp/cpp
+/lsp/python
+/lsp/js
+/lsp/rust
+/lsp/go
+```
 
 ## Example `.env.local`
 
@@ -189,18 +206,11 @@ LSP_AUTH_TOKEN="dev-lsp-token"
 LSP_SERVER_WS_BASE="ws://127.0.0.1:3001"
 ```
 
-## Judge API Contract
-
-The frontend expects:
-
-```txt
-POST /run
-POST /submit
-GET  /submission/:id
-WS   /submission/:id
-```
+## Judge API contract
 
 ### `POST /run`
+
+Request:
 
 ```json
 {
@@ -210,6 +220,8 @@ WS   /submission/:id
   "testcases": []
 }
 ```
+
+Response:
 
 ```json
 {
@@ -234,7 +246,7 @@ WS   /submission/:id
 { "submissionId": "sub_123" }
 ```
 
-### WebSocket Status
+### WebSocket status message
 
 ```json
 {
@@ -249,36 +261,37 @@ WS   /submission/:id
 
 | Script | Description |
 | --- | --- |
-| `npm run dev` | Start the Next.js development server |
+| `npm run dev` | Start the custom Next.js development server (`server.mjs`) |
 | `npm run build` | Build the production app |
-| `npm run start` | Start the production server after build |
+| `npm run start` | Start the custom production server after building |
 | `npm run typecheck` | Run TypeScript without emitting files |
+| `npm run lint` | Alias for `npm run typecheck` |
 | `npm run check` | Run typecheck and production build |
-| `npm run lsp:up` | Build and run the Dockerized LSP bridge |
-| `npm run lsp:up:detached` | Run the LSP bridge in the background |
-| `npm run lsp:logs` | Follow LSP bridge logs |
-| `npm run lsp:down` | Stop the LSP bridge |
-| `npm run lsp:cache` | Pre-download large LSP runtime archives into `lsp/storage/` |
+| `npm run lsp:up` | Build and run the companion Docker LSP runtime when `lsp/docker-compose.yml` exists |
+| `npm run lsp:up:detached` | Run the companion LSP runtime in the background when available |
+| `npm run lsp:logs` | Follow companion LSP runtime logs when available |
+| `npm run lsp:down` | Stop the companion LSP runtime when available |
+| `npm run lsp:cache` | Pre-download companion LSP runtime archives when available |
 
-## Add a Language
+## Add a language
 
-1. Add the language id to `types/ide.ts`.
-2. Add display metadata and starter main code in `lib/language-options.ts`.
-3. Add an LSP descriptor in `lsp/integrations/<language>.ts`.
-4. Register it in `lsp/integrations/index.ts`.
-5. Add a bridge route and command in `lsp/server/server.mjs`.
-6. Document the new `NEXT_PUBLIC_LSP_*_WS` variable.
+1. Add the language id and shared types in `types/ide.ts`.
+2. Add display metadata, Monaco language id, file extension, and starter code in `lib/language-options.ts`.
+3. Add or update the frontend LSP config for the new `NEXT_PUBLIC_LSP_*_WS` variable.
+4. Add a `/api/lsp/<language>` proxy route in `server.mjs`.
+5. Ensure the external LSP runtime exposes `/lsp/<language>`.
+6. Document the new environment variable in both README files and `.env.example`.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| `LSP: <server>` shows disabled | Missing `NEXT_PUBLIC_LSP_*_WS` variable | Copy `.env.example` to `.env.local` and restart Next.js |
-| LSP disconnects immediately | Port conflict, private token mismatch, or unsupported route | Check `LSP_AUTH_TOKEN`, `LSP_SERVER_WS_BASE`, external `/healthz`, and `npm run lsp:logs` |
-| Java completions fail | `jdtls` expects Java public classes to match the file name | Keep `lsp/document-uri.ts` aligned with the editor file name |
-| C++ diagnostics are noisy | `clangd` needs compile flags | Customize `/workspace/compile_flags.txt` |
-| Run/Submit fails | Judge API does not implement the expected contract | Verify `NEXT_PUBLIC_JUDGE_API_URL` and backend routes |
-| WebSocket verdicts do not arrive | Judge WS URL is wrong or blocked | Set `NEXT_PUBLIC_JUDGE_WS_URL` explicitly and inspect the browser network tab |
+| `LSP: <server>` shows disabled | Missing `NEXT_PUBLIC_LSP_*_WS` variable | Copy `.env.example` to `.env.local` and restart `npm run dev` |
+| LSP disconnects immediately | Missing `LSP_AUTH_TOKEN`, wrong token, wrong upstream URL, or external LSP runtime is down | Check `.env.local`, `LSP_SERVER_WS_BASE`, and the external runtime logs |
+| Browser shows token concerns | Token was exposed with a `NEXT_PUBLIC_*` variable | Keep the secret as `LSP_AUTH_TOKEN` only; Monaco should only call `/api/lsp/*` |
+| Run/submit fails | Judge API does not implement the expected contract | Verify `NEXT_PUBLIC_JUDGE_API_URL` and backend routes |
+| WebSocket verdicts do not arrive | Judge WebSocket URL is wrong or blocked | Set `NEXT_PUBLIC_JUDGE_WS_URL` explicitly and inspect the browser Network tab |
+| LSP scripts fail with missing `lsp/docker-compose.yml` | This checkout does not include the companion LSP runtime directory | Run an external LSP runtime separately or restore/add the companion `lsp/` project |
 
 ## License
 
