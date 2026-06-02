@@ -35,11 +35,14 @@ function optionalStringArray(value: unknown): readonly string[] | undefined {
   return Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : undefined;
 }
 
-export function parseSubmissionStatusMessage(value: unknown): SubmissionStatusMessage | undefined {
-  if (!isRecord(value) || typeof value.submissionId !== 'string' || !isExecutionPhase(value.phase)) return undefined;
+export function parseSubmissionStatusMessage(value: unknown, fallbackId?: string): SubmissionStatusMessage | undefined {
+  if (!isRecord(value) || !isExecutionPhase(value.phase)) return undefined;
+
+  const id = value.submissionId ?? value.runId ?? value.id ?? fallbackId;
+  if (typeof id !== 'string' || !id.trim()) return undefined;
 
   return {
-    submissionId: value.submissionId,
+    submissionId: id,
     phase: value.phase,
     verdict: isVerdict(value.verdict) ? value.verdict : undefined,
     stdout: optionalString(value.stdout),

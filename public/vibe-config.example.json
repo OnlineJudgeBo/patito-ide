@@ -1,0 +1,25 @@
+{
+  "adapter": "vibe",
+  "apiBaseUrl": "http://patito.localhost/api",
+  "wsBaseUrl": "ws://patito.localhost/api",
+  "paths": {
+    "context": "/vibe/context",
+    "run": "/vibe/runs",
+    "runStatus": "/vibe/runs/{id}",
+    "submit": "/vibe/submissions",
+    "submissionStatus": "/vibe/submissions/{id}",
+    "submissionStream": "/vibe/submissions/{id}/events"
+  },
+  "features": {
+    "run": true,
+    "submit": true,
+    "websocket": false,
+    "polling": true,
+    "lsp": true
+  },
+  "mathJax": {
+    "enabled": true,
+    "src": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+  },
+  "pollingIntervalMs": 1500
+}

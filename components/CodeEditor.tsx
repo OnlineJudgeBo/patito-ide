@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { LspStatusBadge } from '@/components/LspStatusBadge';
 import { useLspEditor } from '@/hooks/use-lsp-editor';
+import { codeForLanguage } from '@/lib/code-storage';
 import { competitiveEditorOptions, editorThemeFor } from '@/lib/editor-themes';
 import { getLanguage } from '@/lib/language-options';
 import { getLanguageServerConfig } from '@/lsp/config';
@@ -16,10 +17,11 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
 
 export function CodeEditor() {
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
-  const code = useIDEStore((state) => state.codeByLanguage[state.selectedLanguage]);
+  const code = useIDEStore((state) => codeForLanguage(state.codeByLanguage, state.selectedLanguage, state.problem?.problemId));
+  const availableLanguages = useIDEStore((state) => state.availableLanguages);
   const setCode = useIDEStore((state) => state.setCode);
   const ui = useIDEStore((state) => state.ui);
-  const language = getLanguage(selectedLanguage);
+  const language = getLanguage(selectedLanguage, availableLanguages);
   const fileName = lspDocumentFileName(language);
   const lspConfig = getLanguageServerConfig(selectedLanguage);
   const editorTheme = editorThemeFor(ui.colorTheme);

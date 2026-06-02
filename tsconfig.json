@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@/lsp/*": [
+        "./lsp/*"
+      ],
+      "@/lsp/integrations/*": [
+        "./lsp/integrations/*"
       ]
     }
   },

@@ -1,16 +1,18 @@
 'use client';
 
-import { isLanguageId, LANGUAGES } from '@/lib/language-options';
+import { getLanguageAllowedState, isLanguageId } from '@/lib/language-options';
 import { COLOR_THEMES, isColorTheme } from '@/lib/ui-config';
 import { useIDEStore } from '@/store/ide-store';
 
 const selectClass =
-  'h-10 rounded-xl border border-slate-700 bg-slate-950/80 px-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-sky-400';
+  'h-9 rounded-lg border border-slate-700 bg-slate-950/80 px-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-sky-400';
 
 export function LanguageSelector() {
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
+  const availableLanguages = useIDEStore((state) => state.availableLanguages);
   const colorTheme = useIDEStore((state) => state.ui.colorTheme);
   const setLanguage = useIDEStore((state) => state.setLanguage);
+  const allowedLanguages = useIDEStore((state) => state.allowedLanguages);
   const setColorTheme = useIDEStore((state) => state.setColorTheme);
 
   return (
@@ -24,11 +26,14 @@ export function LanguageSelector() {
           }}
           className={selectClass}
         >
-          {LANGUAGES.map((language) => (
-            <option key={language.id} value={language.id}>
-              {language.label}
-            </option>
-          ))}
+          {availableLanguages.map((language) => {
+            const disabled = getLanguageAllowedState(language, allowedLanguages) === false;
+            return (
+              <option key={language.id} value={language.id} disabled={disabled}>
+                {disabled ? `${language.label} (no disponible)` : language.label}
+              </option>
+            );
+          })}
         </select>
       </label>
 
