@@ -21,9 +21,9 @@ export function TestcasePanel() {
   return (
     <section className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-950/80">
       <header className="flex h-10 items-center justify-between border-b border-slate-800 px-4">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Testcases</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Casos de prueba</span>
         <button onClick={addTestcase} className="rounded-lg border border-slate-700 px-2 py-1 text-xs font-semibold text-slate-300 hover:border-sky-400 hover:text-sky-200">
-          + Add
+          + Agregar
         </button>
       </header>
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
@@ -41,20 +41,20 @@ export function TestcasePanel() {
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-slate-800">
                   <div className="grid gap-2 p-3 lg:grid-cols-3">
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Input
+                      Entrada
                       <textarea value={testcase.input} onChange={(event) => updateTestcase(testcase.id, { input: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Expected output
+                      Salida esperada
                       <textarea value={testcase.expectedOutput} onChange={(event) => updateTestcase(testcase.id, { expectedOutput: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                     <label className="grid gap-1 text-xs font-semibold text-slate-500">
-                      Actual output
-                      <textarea value={testcase.actualOutput ?? ''} onChange={(event) => updateTestcase(testcase.id, { actualOutput: event.target.value })} className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
+                      Salida obtenida
+                      <textarea value={testcase.actualOutput ?? ''} readOnly className="h-24 resize-none rounded-lg border border-slate-800 bg-slate-950 p-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400" />
                     </label>
                   </div>
                   <div className="flex justify-end border-t border-slate-800 px-3 py-2">
-                    <button onClick={() => removeTestcase(testcase.id)} className="text-xs font-semibold text-rose-300 hover:text-rose-200">Remove</button>
+                    <button onClick={() => removeTestcase(testcase.id)} className="text-xs font-semibold text-rose-300 hover:text-rose-200">Eliminar</button>
                   </div>
                 </motion.div>
               ) : null}

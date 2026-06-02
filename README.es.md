@@ -13,7 +13,8 @@ Este checkout contiene el **IDE web**:
 - Aplicación Next.js y servidor WebSocket custom (`server.mjs`).
 - Editor de código basado en Monaco.
 - Estado de UI/código persistido con Zustand.
-- Integración con Judge API por HTTP y WebSocket.
+- Integración con Judge API por HTTP y WebSocket opcional.
+- Soporte de handoff Vibe: tokens del OJ, carga rápida con `/ide?id=<problemId>` y persistencia del token de sesión para recargar.
 - Rutas proxy LSP del navegador al servidor bajo `/api/lsp/*`.
 
 El runtime real de language servers se espera como servicio separado y debe ser alcanzable mediante `LSP_SERVER_WS_BASE` (por ejemplo `ws://127.0.0.1:3001`). Algunos scripts todavía apuntan a un directorio compañero `lsp/`; solo funcionan cuando ese directorio existe en tu checkout.
@@ -24,10 +25,10 @@ El runtime real de language servers se espera como servicio separado y debe ser 
 | --- | --- |
 | Editor | Monaco Editor con nombres de archivo por lenguaje y temas configurables |
 | Lenguajes | C++17, Python 3, Java 17, JavaScript, Rust y Go |
-| Enunciado | Panel de problema en español con vista dividida redimensionable |
+| Enunciado | Panel de problema en español con vista dividida redimensionable y MathJax para LaTeX |
 | Ejecución | Paneles separados para salida, stdin, testcases, logs, runtime y memoria |
-| Persistencia | Código, lenguaje, testcases, tamaños de layout, minimapa y tema se guardan localmente |
-| Juez | Llamadas HTTP `run`/`submit` y estado por WebSocket |
+| Persistencia | Código, lenguaje, testcases, layout, minimapa, tema se guardan localmente; el último token de lanzamiento se guarda en sessionStorage |
+| Juez | Contexto Vibe, llamadas HTTP `run`/`submit`, polling y estado por WebSocket opcional |
 | Proxy LSP | El navegador conecta a `/api/lsp/<language>` y el servidor reenvía el token privado al runtime LSP |
 | Atajos | `Ctrl+Enter` para ejecutar, `Ctrl+Space` para sugerencias del editor |
 
@@ -134,6 +135,37 @@ npm run dev
 
 Abre <http://localhost:3000>.
 
+Si ejecutas el stack completo de Patito con compose, las URLs locales son solo HTTP:
+
+```txt
+http://patito.localhost/oj/
+http://patito.localhost/ide/
+http://patito.localhost/api/
+```
+
+El router Traefik del compose escucha en el puerto `80` y no redirige a HTTPS. Usa `ws://` para WebSockets en la configuración local.
+
+## Cargar un problema de Patito
+
+El flujo normal es:
+
+1. El OJ abre `/oj/vibe-ide-launch.php?id=<problemId>` o su equivalente de contest.
+2. Esa ruta crea un token temporal y redirige a `/ide?token=<token>`.
+3. Vibe IDE guarda ese token en `sessionStorage`, lo quita de la barra de dirección y carga `/api/vibe/context`.
+
+Para carga rápida local, Vibe IDE también acepta parámetros en la URL del IDE y redirige por el mismo flujo de launch:
+
+```txt
+http://patito.localhost/ide?id=1010
+http://patito.localhost/ide?cid=3&pid=0
+```
+
+Después de un lanzamiento exitoso con token, recargar `http://patito.localhost/ide/` en la misma pestaña/sesión vuelve a cargar el último problema usando el token persistido.
+
+## LaTeX y enunciados enriquecidos
+
+Las secciones del problema pueden contener HTML y delimitadores LaTeX como `$N$`, `\(N\)`, `$$...$$` o `\[...\]`. El IDE sanitiza primero el HTML, lo escribe en el nodo del enunciado y recién después ejecuta MathJax sobre ese nodo. Ese orden evita que re-renders de React, como notificaciones toast, reemplacen la matemática renderizada por texto LaTeX crudo.
+
 Si solo quieres revisar la UI, el backend del juez y el runtime LSP pueden estar apagados. Run/submit y LSP mostrarán errores de conexión hasta que sus servicios estén disponibles.
 
 ## Configurar el backend del juez
@@ -141,17 +173,28 @@ Si solo quieres revisar la UI, el backend del juez y el runtime LSP pueden estar
 El frontend espera estos endpoints:
 
 ```txt
-POST /run
-POST /submit
-GET  /submission/:id
-WS   /submission/:id
+POST /vibe/runs
+GET  /vibe/runs/{id}
+POST /vibe/submissions
+GET  /vibe/submissions/{id}
+WS   /vibe/submissions/{id}/events (opcional)
 ```
 
-Configura las URLs del juez en `.env.local`:
+
+El contrato genérico actualizado para integrar cualquier juez está documentado en [`docs/judge-api-contract.md`](docs/judge-api-contract.md).
+
+Configura las URLs del juez en `.env.local` o `public/vibe-config.json`:
 
 ```env
 NEXT_PUBLIC_JUDGE_API_URL="http://localhost:8080"
 NEXT_PUBLIC_JUDGE_WS_URL="ws://localhost:8080"
+NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL="http://localhost:8080/api/vibe/context"
+```
+
+En el stack compose de Patito se usan valores runtime same-origin:
+
+```json
+{ "apiBaseUrl": "/api", "paths": { "context": "/vibe/context" } }
 ```
 
 Si omites `NEXT_PUBLIC_JUDGE_WS_URL`, la app la deriva desde `NEXT_PUBLIC_JUDGE_API_URL`.
@@ -194,6 +237,7 @@ Rutas upstream esperadas del runtime LSP externo:
 ```env
 NEXT_PUBLIC_JUDGE_API_URL="http://localhost:8080"
 NEXT_PUBLIC_JUDGE_WS_URL="ws://localhost:8080"
+NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL="http://localhost:8080/api/vibe/context"
 
 NEXT_PUBLIC_LSP_CPP_WS="/api/lsp/cpp"
 NEXT_PUBLIC_LSP_PYTHON_WS="/api/lsp/python"
@@ -267,11 +311,11 @@ Response:
 | `npm run typecheck` | Ejecuta TypeScript sin emitir archivos |
 | `npm run lint` | Alias de `npm run typecheck` |
 | `npm run check` | Ejecuta typecheck y build |
-| `npm run lsp:up` | Construye y ejecuta el runtime LSP Docker compañero cuando existe `lsp/docker-compose.yml` |
-| `npm run lsp:up:detached` | Ejecuta el runtime LSP compañero en segundo plano cuando está disponible |
-| `npm run lsp:logs` | Sigue logs del runtime LSP compañero cuando está disponible |
-| `npm run lsp:down` | Detiene el runtime LSP compañero cuando está disponible |
-| `npm run lsp:cache` | Pre-descarga archivos del runtime LSP compañero cuando está disponible |
+| `npm run lsp:up` | Helper legacy para checkouts donde el runtime LSP está copiado en `vibe-ide/lsp/` |
+| `npm run lsp:up:detached` | Helper legacy detached para checkouts con `vibe-ide/lsp/` |
+| `npm run lsp:logs` | Helper legacy de logs para checkouts con `vibe-ide/lsp/` |
+| `npm run lsp:down` | Helper legacy para detener LSP en checkouts con `vibe-ide/lsp/` |
+| `npm run lsp:cache` | Helper legacy de cache para `vibe-ide/lsp/`; en este layout usa `../vibe-lsp-server/storage/` |
 
 ## Agregar un lenguaje
 
@@ -291,7 +335,7 @@ Response:
 | Hay preocupación porque el token aparece en el navegador | El token se expuso con una variable `NEXT_PUBLIC_*` | Mantén el secreto solo como `LSP_AUTH_TOKEN`; Monaco solo debe llamar a `/api/lsp/*` |
 | Run/submit falla | Judge API no implementa el contrato esperado | Verifica `NEXT_PUBLIC_JUDGE_API_URL` y las rutas del backend |
 | No llegan veredictos por WebSocket | URL WebSocket del juez incorrecta o bloqueada | Configura `NEXT_PUBLIC_JUDGE_WS_URL` explícitamente e inspecciona Network del navegador |
-| Scripts LSP fallan porque falta `lsp/docker-compose.yml` | Este checkout no incluye el directorio compañero del runtime LSP | Ejecuta un runtime LSP externo por separado o restaura/agrega el proyecto compañero `lsp/` |
+| Scripts LSP fallan porque falta `lsp/docker-compose.yml` | Este layout mantiene el runtime como hermano `../vibe-lsp-server` | Usa el servicio `vibe-lsp-server` del compose principal o ejecuta `docker compose up --build` dentro de `../vibe-lsp-server` |
 
 ## Licencia
 

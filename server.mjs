@@ -5,6 +5,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
+const basePath = normalizeBasePath(process.env.VIBE_IDE_BASE_PATH ?? process.env.NEXT_PUBLIC_BASE_PATH ?? '');
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 const lspProxyServer = new WebSocketServer({ noServer: true });
@@ -44,7 +45,8 @@ server.listen(port, hostname, () => {
 
 function languageFromProxyPath(url) {
   const path = new URL(url, 'ws://localhost').pathname;
-  const match = path.match(/^\/api\/lsp\/(java|cpp|python|js|rust|go)$/);
+  const normalizedPath = basePath && path.startsWith(`${basePath}/`) ? path.slice(basePath.length) : path;
+  const match = normalizedPath.match(/^\/api\/lsp\/(java|cpp|python|js|rust|go)$/);
   return match?.[1];
 }
 
@@ -93,4 +95,9 @@ function proxyLspConnection(browserSocket, language) {
 
 function lspUpstreamBaseUrl() {
   return process.env.LSP_SERVER_WS_BASE ?? 'ws://127.0.0.1:3001';
+}
+
+function normalizeBasePath(value) {
+  if (!value || value === '/') return '';
+  return `/${value.replace(/^\/+|\/+$/g, '')}`;
 }

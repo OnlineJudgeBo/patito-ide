@@ -1,22 +1,43 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TOAST_TIMEOUT_MS } from '@/lib/ui-config';
 
-export function useToast(timeoutMs = TOAST_TIMEOUT_MS) {
-  const [message, setMessage] = useState('');
-  const timeoutRef = useRef<number | undefined>(undefined);
+type ToastListener = (message: string) => void;
 
+const toastListeners = new Set<ToastListener>();
+let toastTimeout: number | undefined;
+
+function emitToast(message: string) {
+  for (const listener of toastListeners) listener(message);
+}
+
+function showToast(message: string, timeoutMs: number) {
+  window.clearTimeout(toastTimeout);
+  emitToast(message);
+  toastTimeout = window.setTimeout(() => emitToast(''), timeoutMs);
+}
+
+export function useToast(timeoutMs = TOAST_TIMEOUT_MS) {
   const notify = useCallback(
     (nextMessage: string) => {
-      window.clearTimeout(timeoutRef.current);
-      setMessage(nextMessage);
-      timeoutRef.current = window.setTimeout(() => setMessage(''), timeoutMs);
+      showToast(nextMessage, timeoutMs);
     },
     [timeoutMs],
   );
 
-  useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
+  return { notify } as const;
+}
 
-  return { message, notify } as const;
+export function useToastMessage() {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    toastListeners.add(setMessage);
+    return () => {
+      toastListeners.delete(setMessage);
+    };
+  }, []);
+
+  return message;
 }

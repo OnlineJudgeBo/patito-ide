@@ -297,3 +297,65 @@ input {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+.rich-content p {
+  margin: 0 0 0.75rem;
+}
+
+.rich-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-content strong,
+.rich-content b {
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+.rich-content em,
+.rich-content i {
+  font-style: italic;
+}
+
+.rich-content ul,
+.rich-content ol {
+  margin: 0.5rem 0 0.75rem 1.25rem;
+  padding-left: 1rem;
+}
+
+.rich-content ul {
+  list-style: disc;
+}
+
+.rich-content ol {
+  list-style: decimal;
+}
+
+.rich-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.rich-content th,
+.rich-content td {
+  border: 1px solid rgb(51 65 85 / 0.9);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.rich-content a {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.theme-light .rich-content strong,
+.theme-light .rich-content b {
+  color: #0f172a;
+}
+
+.theme-hacker .rich-content strong,
+.theme-hacker .rich-content b,
+.theme-hacker .rich-content a {
+  color: #39ff14;
+}

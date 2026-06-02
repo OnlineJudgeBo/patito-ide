@@ -6,21 +6,12 @@ export const IDE_STORAGE_KEY = 'vibe-competitive-ide';
 export const initialTestcases: readonly Testcase[] = [
   {
     id: 'sample-1',
-    name: 'Sample 1',
-    input: '5\n',
-    expectedOutput: '5\n',
+    name: 'Caso de ejemplo 1',
+    input: '',
+    expectedOutput: '',
     actualOutput: '',
     status: 'idle',
     expanded: true,
-  },
-  {
-    id: 'edge-1',
-    name: 'Edge case',
-    input: '1\n',
-    expectedOutput: '1\n',
-    actualOutput: '',
-    status: 'idle',
-    expanded: false,
   },
 ];
 
@@ -30,11 +21,11 @@ export const initialExecution: ExecutionResult = {
   stdout: '',
   stderr: '',
   compileErrors: '',
-  logs: ['Ready. Use Ctrl + Enter to run or Ctrl + Shift + Enter to submit.'],
+  logs: [],
 };
 
 export const initialUiSettings: UISettings = {
-  bottomPanelHeight: 300,
+  bottomPanelHeight: 280,
   colorTheme: 'dark',
   minimap: false,
   sidebarWidth: 320,

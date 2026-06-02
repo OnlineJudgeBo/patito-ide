@@ -1,54 +1,32 @@
-import { requestJson } from '@/services/http-client';
-import type { ExecutionResult, RunPayload, SubmissionPayload, SubmissionStatusMessage } from '@/types/ide';
+import { createJudgeAdapter } from '@/services/judge-adapters';
+import { getRuntimeConfig } from '@/services/runtime-config';
+import type { RunPayload, RunResponse, SubmissionPayload, SubmissionStatusMessage, SubmitResponse } from '@/types/ide';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_JUDGE_API_URL;
-
-type RunResponse = {
-  readonly runId: string;
-  readonly result?: ExecutionResult;
-};
-
-type SubmitResponse = {
-  readonly submissionId: string;
-};
-
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/$/, '');
+async function adapter() {
+  return createJudgeAdapter(await getRuntimeConfig());
 }
 
-function endpoint(path: string) {
-  return `${trimTrailingSlash(API_BASE_URL)}${path}`;
+export async function runCode(payload: RunPayload, launchToken?: string): Promise<RunResponse> {
+  return (await adapter()).run(payload, launchToken);
 }
 
-export async function runCode(payload: RunPayload): Promise<RunResponse> {
-  return requestJson(endpoint('/run'), {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+export async function submitCode(payload: SubmissionPayload, launchToken?: string): Promise<SubmitResponse> {
+  return (await adapter()).submit(payload, launchToken);
 }
 
-export async function submitCode(payload: SubmissionPayload): Promise<SubmitResponse> {
-  return requestJson(endpoint('/submit'), {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+export async function getRun(runId: string, launchToken?: string): Promise<SubmissionStatusMessage> {
+  return (await adapter()).runStatus(runId, launchToken);
 }
 
-export async function getSubmission(submissionId: string): Promise<SubmissionStatusMessage> {
-  return requestJson(endpoint(`/submission/${submissionId}`));
+export async function getSubmission(submissionId: string, launchToken?: string): Promise<SubmissionStatusMessage> {
+  return (await adapter()).submissionStatus(submissionId, launchToken);
 }
 
-export function judgeWebSocketUrl(submissionId: string) {
-  const configured = process.env.NEXT_PUBLIC_JUDGE_WS_URL;
-  if (configured) return `${trimTrailingSlash(configured)}/submission/${submissionId}`;
+export async function judgeWebSocketUrl(submissionId: string) {
+  return (await adapter()).streamUrl(submissionId);
+}
 
-  let httpUrl: URL;
-  try {
-    httpUrl = new URL(API_BASE_URL);
-  } catch {
-    throw new Error('NEXT_PUBLIC_JUDGE_API_URL must be an absolute http(s) URL when NEXT_PUBLIC_JUDGE_WS_URL is not set.');
-  }
-
-  httpUrl.protocol = httpUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${trimTrailingSlash(httpUrl.toString())}/submission/${submissionId}`;
+export async function judgePollingIntervalMs() {
+  const config = await getRuntimeConfig();
+  return config.features?.polling === false ? 0 : Math.max(500, config.pollingIntervalMs ?? 1500);
 }
