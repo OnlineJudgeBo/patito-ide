@@ -42,6 +42,8 @@ export type RunResponse = {
 
 export type SubmissionPayload = RunPayload & {
   readonly problemId?: string;
+  readonly contestId?: number | string;
+  readonly num?: number;
 };
 
 export type SubmitResponse = {

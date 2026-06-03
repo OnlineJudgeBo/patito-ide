@@ -10,6 +10,7 @@ import type { LanguageId } from '@/types/ide';
 export function useVibeLaunchContext(notify: (message: string) => void) {
   const setLaunchToken = useIDEStore((state) => state.setLaunchToken);
   const setProblem = useIDEStore((state) => state.setProblem);
+  const setContextIdentifiers = useIDEStore((state) => state.setContextIdentifiers);
   const setStdin = useIDEStore((state) => state.setStdin);
   const setLanguage = useIDEStore((state) => state.setLanguage);
   const selectedLanguage = useIDEStore((state) => state.selectedLanguage);
@@ -50,6 +51,7 @@ export function useVibeLaunchContext(notify: (message: string) => void) {
         setAllowedLanguages(allowed);
         setJudgeLanguageIds(judgeLanguageIds);
         setJudgeFeatures({ run: true, submit: true, polling: true, websocket: false, lsp: true, ...context.features });
+        setContextIdentifiers(context.identifiers);
 
         const requestedLanguage = context.identifiers?.languageId ?? context.identifiers?.languageName;
         const selectedByRequest =
@@ -77,5 +79,5 @@ export function useVibeLaunchContext(notify: (message: string) => void) {
         setContextStatus('error', message);
         notify('No se pudo cargar el problema desde la API.');
       });
-  }, [addLog, notify, selectedLanguage, setAllowedLanguages, setAvailableLanguages, setContextStatus, setJudgeFeatures, setJudgeLanguageIds, setLanguage, setTestcases, setLaunchToken, setProblem, setStdin]);
+  }, [addLog, notify, selectedLanguage, setAllowedLanguages, setAvailableLanguages, setContextIdentifiers, setContextStatus, setJudgeFeatures, setJudgeLanguageIds, setLanguage, setTestcases, setLaunchToken, setProblem, setStdin]);
 }

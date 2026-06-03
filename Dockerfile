@@ -11,10 +11,9 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_JUDGE_WS_URL=${NEXT_PUBLIC_JUDGE_WS_URL} \
     NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL=${NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL}
 
-COPY vibe-ide/package*.json ./
+COPY package*.json ./
 RUN npm ci
-COPY vibe-ide/ ./
-COPY vibe-lsp-server/ ./lsp/
+COPY . ./
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner

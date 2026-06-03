@@ -19,6 +19,7 @@ export function useSubmitAction({
 }) {
   const launchToken = useIDEStore((state) => state.launchToken);
   const problem = useIDEStore((state) => state.problem);
+  const contextIdentifiers = useIDEStore((state) => state.contextIdentifiers);
   const setExecution = useIDEStore((state) => state.setExecution);
 
   return useCallback(async () => {
@@ -27,7 +28,15 @@ export function useSubmitAction({
     setExecution({ statusKind: undefined, phase: 'queued', verdict: 'Pending', logs: ['Envío en cola.'] });
 
     try {
-      const response = await submitCode({ ...payload, problemId: problem?.problemId ?? 'local-problem' }, launchToken);
+      const response = await submitCode(
+        {
+          ...payload,
+          problemId: problem?.problemId ?? 'local-problem',
+          contestId: contextIdentifiers?.contestId,
+          num: contextIdentifiers?.num,
+        },
+        launchToken,
+      );
       setExecution({
         id: response.submissionId,
         statusKind: 'submission',
@@ -42,5 +51,5 @@ export function useSubmitAction({
     } finally {
       setBusyAction(null);
     }
-  }, [ensureAllowedLanguage, launchToken, notify, payload, problem?.problemId, setBusyAction, setExecution]);
+  }, [contextIdentifiers?.contestId, contextIdentifiers?.num, ensureAllowedLanguage, launchToken, notify, payload, problem?.problemId, setBusyAction, setExecution]);
 }
