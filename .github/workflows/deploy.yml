@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main2
-      - develop2
-      - staging2
+      - main
+      - develop
+      - staging
 
 concurrency:
   group: vibe-ide-image-${{ github.ref }}
