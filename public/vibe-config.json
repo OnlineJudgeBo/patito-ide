@@ -1,9 +1,9 @@
 {
   "adapter": "vibe",
-  "apiBaseUrl": "/api",
+  "apiBaseUrl": "http://localhost:8088/api",
   "paths": {
     "context": "/vibe/context",
-    "run": "/vibe/runs",
+    "run": "/vibe/custom-input",
     "runStatus": "/vibe/runs/{id}",
     "submit": "/vibe/submissions",
     "submissionStatus": "/vibe/submissions/{id}",
