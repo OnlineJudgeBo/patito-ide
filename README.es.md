@@ -1,5 +1,7 @@
 # Patito IDE
 
+[English](README.md) · Español
+
 Editor de código que se abre desde los problemas de Patito. Permite leer el enunciado, probar una solución con distintas entradas y enviarla al juez.
 
 Usa Next.js, React, TypeScript, Monaco Editor y Zustand. `server.mjs` levanta Next.js y también hace de proxy para los WebSocket del LSP.

@@ -1,12 +1,14 @@
 # Patito IDE
 
-Editor de código que se abre desde los problemas de Patito. Permite leer el enunciado, probar una solución con distintas entradas y enviarla al juez.
+English · [Español](README.es.md)
 
-Usa Next.js, React, TypeScript, Monaco Editor y Zustand. `server.mjs` levanta Next.js y también hace de proxy para los WebSocket del LSP.
+Patito IDE is the code editor opened from a Patito problem. It lets students read the statement, test a solution with different inputs, and submit it to the judge.
 
-## Desarrollo
+It uses Next.js, React, TypeScript, Monaco Editor, and Zustand. `server.mjs` runs Next.js and proxies the LSP WebSocket connections.
 
-Se necesita Node.js 20 o superior. La imagen Docker usa Node.js 22.
+## Development
+
+Node.js 20 or newer is required. The Docker image uses Node.js 22.
 
 ```bash
 cp .env.example .env.local
@@ -14,30 +16,32 @@ npm ci
 npm run dev
 ```
 
-Abre <http://localhost:3000>. Con `NEXT_PUBLIC_BASE_PATH=/ide`, abre <http://localhost:3000/ide/>.
+Open <http://localhost:3000>. When `NEXT_PUBLIC_BASE_PATH=/ide` is set, use <http://localhost:3000/ide/>.
 
-Para ejecución real también deben estar levantados la API y `patito-lsp-server`.
+The API and `patito-lsp-server` must also be running to use execution, submission, and language features.
 
-## Dependencias
+## Dependencies
 
-El IDE puede abrir la interfaz por sí solo, pero cada parte depende de otro servicio:
+The interface can run on its own, but each feature depends on another service:
 
-| Función | Servicio |
+| Feature | Service |
 | --- | --- |
-| cargar el problema | `onlineJudgeAdmin-back` |
-| ejecutar y enviar | `onlineJudgeAdmin-back` y `core` |
-| autocompletado y diagnósticos | `patito-lsp-server` |
-| abrir el IDE desde la web | `patito-client-web` |
+| load a problem | `onlineJudgeAdmin-back` |
+| run and submit code | `onlineJudgeAdmin-back` and `core` |
+| completion and diagnostics | `patito-lsp-server` |
+| open the IDE from the website | `patito-client-web` |
 
-Para probar el flujo entero, desde la raíz del workspace:
+To test the complete flow, run this command from the workspace root:
 
 ```bash
 docker compose up -d --build
 ```
 
-El Compose espera que la API y el LSP estén disponibles antes de iniciar el IDE.
+Compose waits for the API and LSP service before starting the IDE.
 
-## Variables básicas
+## Environment variables
+
+Start with the provided example:
 
 ```env
 NEXT_PUBLIC_JUDGE_API_URL=http://localhost:8080
@@ -48,68 +52,68 @@ LSP_AUTH_TOKEN=change-me
 LSP_SERVER_WS_BASE=ws://127.0.0.1:3001
 ```
 
-| Variable | Uso | Dónde se usa |
+| Variable | Purpose | Used by |
 | --- | --- | --- |
-| `NEXT_PUBLIC_JUDGE_API_URL` | URL HTTP de la API | navegador |
-| `NEXT_PUBLIC_JUDGE_WS_URL` | URL WebSocket del juez | navegador |
-| `NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL` | endpoint que carga el problema | navegador |
-| `NEXT_PUBLIC_LSP_*_WS` | rutas proxy de cada lenguaje | navegador |
-| `LSP_AUTH_TOKEN` | token privado entre el IDE y el LSP | servidor |
-| `LSP_SERVER_WS_BASE` | URL interna de `patito-lsp-server` | servidor |
-| `NEXT_PUBLIC_JUDGE_ADAPTER` | adaptador de API activo | navegador |
-| `NEXT_PUBLIC_JUDGE_RUN_ENABLED` | habilita ejecución con entrada | navegador |
-| `NEXT_PUBLIC_JUDGE_SUBMIT_ENABLED` | habilita envíos | navegador |
-| `NEXT_PUBLIC_JUDGE_POLLING_ENABLED` | habilita consulta periódica | navegador |
-| `NEXT_PUBLIC_JUDGE_WS_ENABLED` | habilita eventos por WebSocket | navegador |
-| `NEXT_PUBLIC_JUDGE_POLLING_INTERVAL_MS` | intervalo del polling | navegador |
-| `NEXT_PUBLIC_MATHJAX_ENABLED` | habilita fórmulas del enunciado | navegador |
-| `NEXT_PUBLIC_MATHJAX_SRC` | URL del script de MathJax | navegador |
+| `NEXT_PUBLIC_JUDGE_API_URL` | HTTP URL of the judge API | browser |
+| `NEXT_PUBLIC_JUDGE_WS_URL` | WebSocket URL of the judge | browser |
+| `NEXT_PUBLIC_VIBE_IDE_CONTEXT_URL` | endpoint used to load a problem | browser |
+| `NEXT_PUBLIC_LSP_*_WS` | proxy route for each language | browser |
+| `LSP_AUTH_TOKEN` | private token shared by the IDE and LSP server | server |
+| `LSP_SERVER_WS_BASE` | internal URL of `patito-lsp-server` | server |
+| `NEXT_PUBLIC_JUDGE_ADAPTER` | active judge API adapter | browser |
+| `NEXT_PUBLIC_JUDGE_RUN_ENABLED` | enables custom-input runs | browser |
+| `NEXT_PUBLIC_JUDGE_SUBMIT_ENABLED` | enables submissions | browser |
+| `NEXT_PUBLIC_JUDGE_POLLING_ENABLED` | enables result polling | browser |
+| `NEXT_PUBLIC_JUDGE_WS_ENABLED` | enables WebSocket events | browser |
+| `NEXT_PUBLIC_JUDGE_POLLING_INTERVAL_MS` | delay between polling requests | browser |
+| `NEXT_PUBLIC_MATHJAX_ENABLED` | enables formulas in statements | browser |
+| `NEXT_PUBLIC_MATHJAX_SRC` | URL of the MathJax script | browser |
 
-Las variables `NEXT_PUBLIC_LSP_*_WS` apuntan a `/api/lsp/<lenguaje>`. El token del LSP es privado: déjalo en `LSP_AUTH_TOKEN`, sin el prefijo `NEXT_PUBLIC_`.
+The `NEXT_PUBLIC_LSP_*_WS` variables should point to `/api/lsp/<language>`. Keep the LSP token in `LSP_AUTH_TOKEN`; do not add the `NEXT_PUBLIC_` prefix.
 
-Todo lo que empieza con `NEXT_PUBLIC_` termina dentro del JavaScript que recibe el navegador. No pongas secretos en esas variables.
+Every `NEXT_PUBLIC_` value is included in the JavaScript sent to the browser. Never store secrets in those variables.
 
-Las opciones `NEXT_PUBLIC_JUDGE_*_ENABLED` activan o desactivan ejecución, envío, polling y WebSocket.
+The `NEXT_PUBLIC_JUDGE_*_ENABLED` flags can turn run, submit, polling, and WebSocket support on or off.
 
-## Comandos
+## Commands
 
 ```bash
-npm run dev         # desarrollo
-npm run typecheck   # revisa TypeScript
-npm run build       # build de producción
-npm start           # inicia el build
+npm run dev         # development server
+npm run typecheck   # check TypeScript
+npm run build       # production build
+npm start           # start the production build
 npm run check       # typecheck + build
 ```
 
-Los comandos `lsp:*` esperan un runtime dentro de `lsp/`. En este workspace el servidor está en la carpeta vecina `patito-lsp-server`.
+The `lsp:*` commands expect an LSP runtime inside `lsp/`. In this workspace, the server is kept in the neighboring `patito-lsp-server` directory.
 
-## Estructura del proyecto
+## Project structure
 
 ```text
 .
-├── app/                    página, layout y estilos
+├── app/                    page, layout, and styles
 ├── components/
-│   ├── ide/                componentes internos del editor
-│   ├── CodeEditor.tsx      Monaco
+│   ├── ide/                internal editor components
+│   ├── CodeEditor.tsx      Monaco editor
 │   ├── ProblemStatement.tsx
 │   └── TestcasePanel.tsx
-├── hooks/                  ejecución, envío, LSP y atajos
-├── lib/                    lenguajes, temas y helpers
-├── lsp/                    cliente LSP de Monaco
-├── services/               API, descargas y adaptadores
-├── store/                  estado Zustand
-├── types/                  tipos compartidos
-├── public/                 configuración runtime
-├── docs/                   contrato del juez y capturas
-├── .env.example           variables para desarrollo
-├── server.mjs             servidor y proxy WebSocket
+├── hooks/                  execution, submission, LSP, and shortcuts
+├── lib/                    languages, themes, and helpers
+├── lsp/                    Monaco LSP client
+├── services/               API clients, downloads, and adapters
+├── store/                  Zustand state
+├── types/                  shared types
+├── public/                 runtime configuration
+├── docs/                   judge contract and screenshots
+├── .env.example           development variables
+├── server.mjs             server and WebSocket proxy
 ├── next.config.ts
 └── package.json
 ```
 
-El flujo es: la web genera un enlace firmado, el IDE pide el contexto a la API y luego ejecuta o envía el código. El resultado llega por polling o WebSocket.
+The website creates a signed launch link, the IDE requests the problem context from the API, and then it runs or submits the code. Results are received through polling or WebSocket events.
 
-El contrato del juez está en [`docs/judge-api-contract.md`](docs/judge-api-contract.md).
+The judge contract is documented in [`docs/judge-api-contract.md`](docs/judge-api-contract.md).
 
 ## Docker
 
