@@ -2,12 +2,12 @@
   "adapter": "vibe",
   "apiBaseUrl": "http://localhost:8088/api",
   "paths": {
-    "context": "/vibe/context",
-    "run": "/vibe/custom-input",
-    "runStatus": "/vibe/runs/{id}",
-    "submit": "/vibe/submissions",
-    "submissionStatus": "/vibe/submissions/{id}",
-    "submissionStream": "/vibe/submissions/{id}/events"
+    "context": "/patito-ide/context",
+    "run": "/patito-ide/custom-input",
+    "runStatus": "/patito-ide/runs/{id}",
+    "submit": "/patito-ide/submissions",
+    "submissionStatus": "/patito-ide/submissions/{id}",
+    "submissionStream": "/patito-ide/submissions/{id}/events"
   },
   "features": {
     "run": true,

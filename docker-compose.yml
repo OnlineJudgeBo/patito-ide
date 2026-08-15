@@ -1,0 +1,21 @@
+services:
+  ide:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: "${IDE_IMAGE_NAME:-ghcr.io/samuelloza/patito-ide-${IDE_IMAGE_BRANCH:-local}}"
+    env_file:
+      - .env
+    environment:
+      PORT: "${PORT:-3000}"
+      HOST: "${HOST:-0.0.0.0}"
+      PATITO_IDE_TOKEN_SECRET: "${PATITO_IDE_TOKEN_SECRET:?PATITO_IDE_TOKEN_SECRET is required in .env — must match the secret your platform signs launch tokens with}"
+      PATITO_IDE_TOKEN_ISS: "${PATITO_IDE_TOKEN_ISS:-patito-online-judge}"
+      PATITO_IDE_TOKEN_AUD: "${PATITO_IDE_TOKEN_AUD:-vibe-ide}"
+      LSP_AUTH_TOKEN: "${LSP_AUTH_TOKEN:?LSP_AUTH_TOKEN is required in .env — must match patito-lsp-server's LSP_AUTH_TOKEN}"
+      LSP_SERVER_WS_BASE: "${LSP_SERVER_WS_BASE:-ws://127.0.0.1:3001}"
+    ports:
+      - "${IDE_PORT:-3000}:3000"
+    volumes:
+      - ./public/vibe-config.json:/app/public/vibe-config.json:ro
+    restart: unless-stopped

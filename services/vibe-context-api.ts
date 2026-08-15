@@ -39,8 +39,10 @@ function appendQuery(url: string, params: Record<string, string | undefined>) {
 
 export async function fetchVibeLaunchContext(request: VibeLaunchContextRequest): Promise<VibeLaunchContext> {
   const config = await getRuntimeConfig();
-  const contextEndpoint = config.contextUrl ?? `${trimTrailingSlash(config.apiBaseUrl ?? '')}${config.paths?.context ?? '/vibe/context'}`;
-  if (!contextEndpoint || contextEndpoint === '/vibe/context') throw new Error('Judge context API URL is not configured.');
+  const contextEndpoint = config.paths?.context
+    ? `${trimTrailingSlash(config.apiBaseUrl ?? '')}${config.paths.context}`
+    : config.contextUrl;
+  if (!contextEndpoint) throw new Error('Judge context API URL is not configured.');
 
   const url = appendQuery(contextEndpoint, {
     token: request.token,

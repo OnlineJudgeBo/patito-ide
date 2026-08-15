@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import next from 'next';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -27,6 +28,14 @@ server.on('upgrade', (request, socket, head) => {
     return;
   }
 
+  const requestUrl = new URL(request.url ?? '', 'http://localhost');
+  const launchToken = requestUrl.searchParams.get('token') ?? bearerToken(request.headers.authorization);
+  if (!verifyLaunchToken(launchToken)) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   lspProxyServer.handleUpgrade(request, socket, head, (browserSocket) => {
     lspProxyServer.emit('connection', browserSocket, request, language);
   });
@@ -41,6 +50,7 @@ server.listen(port, hostname, () => {
   console.log('LSP proxy routes: /api/lsp/java /api/lsp/cpp /api/lsp/python /api/lsp/js /api/lsp/rust /api/lsp/go');
   console.log(`LSP upstream: ${lspUpstreamBaseUrl()}`);
   console.log(`LSP token forwarding: ${process.env.LSP_AUTH_TOKEN?.trim() ? 'enabled' : 'disabled'}`);
+  console.log(`LSP browser auth (PATITO_IDE_TOKEN_SECRET): ${process.env.PATITO_IDE_TOKEN_SECRET?.trim() ? 'enabled' : 'MISSING — all LSP connections will be rejected'}`);
 });
 
 function languageFromProxyPath(url) {
@@ -95,6 +105,40 @@ function proxyLspConnection(browserSocket, language) {
 
 function lspUpstreamBaseUrl() {
   return process.env.LSP_SERVER_WS_BASE ?? 'ws://127.0.0.1:3001';
+}
+
+function bearerToken(header) {
+  const match = header?.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim();
+}
+
+function verifyLaunchToken(token) {
+  const secret = process.env.PATITO_IDE_TOKEN_SECRET?.trim();
+  if (!secret || !token) return false;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [headerPart, payloadPart, signaturePart] = parts;
+
+  const expectedSignature = createHmac('sha256', secret).update(`${headerPart}.${payloadPart}`).digest('base64url');
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const actualBuffer = Buffer.from(signaturePart);
+  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual(expectedBuffer, actualBuffer)) return false;
+
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+  } catch {
+    return false;
+  }
+
+  const issuer = process.env.PATITO_IDE_TOKEN_ISS ?? 'patito-online-judge';
+  const audience = process.env.PATITO_IDE_TOKEN_AUD ?? 'patito-ide';
+  if (claims.iss !== issuer || claims.aud !== audience) return false;
+  if (typeof claims.exp !== 'number' || claims.exp < Date.now() / 1000) return false;
+  if (!claims.sub) return false;
+
+  return true;
 }
 
 function normalizeBasePath(value) {

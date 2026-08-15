@@ -1,6 +1,6 @@
-# Contrato API del juez para Vibe IDE
+# Contrato API del juez para Patito IDE
 
-Vibe IDE es agnóstico al juez. Un juez se integra exponiendo este contrato HTTP, o sirviendo `/vibe-config.json` para mapear estas operaciones a rutas equivalentes.
+Patito IDE es agnóstico al juez. Un juez se integra exponiendo este contrato HTTP, o sirviendo `/vibe-config.json` para mapear estas operaciones a rutas equivalentes.
 
 ## Configuración en runtime
 
@@ -13,7 +13,7 @@ El navegador primero intenta cargar `/vibe-config.json` desde el mismo origen. S
   "wsBaseUrl": "ws://judge.example/api",
   "paths": {
     "context": "/vibe/context",
-    "run": "/vibe/runs",
+    "run": "/vibe/custom-input",
     "runStatus": "/vibe/runs/{id}",
     "submit": "/vibe/submissions",
     "submissionStatus": "/vibe/submissions/{id}",
@@ -43,7 +43,7 @@ Ese endpoint valida sesión/permisos, crea un token temporal y redirige a:
 http://patito.localhost/ide/?token=<handoff-token>
 ```
 
-Como atajo local, Vibe IDE acepta:
+Como atajo local, Patito IDE acepta:
 
 ```txt
 http://patito.localhost/ide?id=1010
@@ -51,6 +51,47 @@ http://patito.localhost/ide?cid=3&pid=0
 ```
 
 y redirige al launch del OJ. Tras recibir `token`, el IDE lo guarda en `sessionStorage` y limpia la URL; recargar `/ide/` en la misma sesión vuelve a cargar el último contexto.
+
+## Cómo emitir el `<handoff-token>`
+
+El `<handoff-token>` es un **JWT estándar firmado con HMAC-SHA256 (HS256)**. Cualquier
+juez que se integre puede emitirlo con la librería JWT que prefiera (no hace falta
+implementarlo a mano); solo debe respetar este contrato de claims:
+
+| Claim | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `iss` | string | Sí | Debe igualar `PATITO_IDE_TOKEN_ISS` configurado en el IDE. |
+| `aud` | string | Sí | Debe igualar `PATITO_IDE_TOKEN_AUD` configurado en el IDE. |
+| `exp` | number (unix seconds) | Sí | Vida corta recomendada — minutos, no horas. |
+| `sub` | string | Sí | Identificador del usuario. No puede ir vacío. |
+| `site_id` | number | No | Sitio/tenant del lado del juez, si aplica. |
+| `problem_id` | number | No | Si se define, el IDE y el juez deben rechazar cualquier envío para otro problema. |
+| `contest_id` | number | No | Igual que arriba, para concursos. |
+| `num` | number | No | Número de problema dentro del concurso (A=0, B=1, ...). |
+| `allowed_languages` | number[] | No | Lenguajes permitidos para esta sesión. Vacío = todos. |
+
+El secreto (`PATITO_IDE_TOKEN_SECRET`) debe ser el mismo en el backend que firma el
+token y en el IDE que lo valida — mínimo 32 caracteres, nunca el valor de ejemplo de
+`.env.example`. **No es el mismo secreto que `LSP_AUTH_TOKEN`**: ese último es interno,
+solo entre `patito-ide` y `patito-lsp-server`, y no lo ve el juez.
+
+Este mismo token, sin cambios, es el que el navegador reenvía como `?token=` al abrir
+cada conexión LSP (`/api/lsp/<lenguaje>`) — `patito-ide` lo vuelve a validar ahí antes
+de conectarse al bridge, así que un token inválido/expirado tampoco deja usar
+autocompletado ni diagnósticos.
+
+Ejemplo de payload antes de firmar:
+
+```json
+{
+  "iss": "patito-online-judge",
+  "aud": "vibe-ide",
+  "sub": "u-123",
+  "site_id": 1,
+  "problem_id": 1000,
+  "exp": 1735689600
+}
+```
 
 ## Contexto
 
@@ -102,7 +143,7 @@ Respuesta:
 ## Ejecutar con entrada personalizada
 
 ```http
-POST /vibe/runs
+POST /vibe/custom-input
 Authorization: Bearer <handoff-token>
 Content-Type: application/json
 ```

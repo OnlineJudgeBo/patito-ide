@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { defineCompetitiveEditorThemes } from '@/lib/editor-themes';
 import { attachLanguageServer } from '@/lsp/monaco-adapter';
 import type { LspStatus } from '@/lsp/types';
+import { useIDEStore } from '@/store/ide-store';
 import type { LanguageDefinition } from '@/types/ide';
 
 type MonacoEditorInstance = Parameters<OnMount>[0];
@@ -25,6 +26,7 @@ export function useLspEditor(language: LanguageDefinition, editorTheme: string) 
   const monacoRef = useRef<MonacoApi | null>(null);
   const [editorReady, setEditorReady] = useState(false);
   const [lspState, setLspState] = useState(initialLspState);
+  const launchToken = useIDEStore((state) => state.launchToken);
 
   const handleMount: OnMount = useCallback(
     (editor, monaco) => {
@@ -47,10 +49,16 @@ export function useLspEditor(language: LanguageDefinition, editorTheme: string) 
   useEffect(() => {
     if (!editorReady || !editorRef.current || !monacoRef.current) return undefined;
 
-    return attachLanguageServer(monacoRef.current, editorRef.current, language, (status, detail) => {
-      setLspState({ status, detail });
-    });
-  }, [editorReady, language]);
+    return attachLanguageServer(
+      monacoRef.current,
+      editorRef.current,
+      language,
+      (status, detail) => {
+        setLspState({ status, detail });
+      },
+      launchToken,
+    );
+  }, [editorReady, language, launchToken]);
 
   return { handleMount, lspState } as const;
 }
