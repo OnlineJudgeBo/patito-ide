@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: ghcr.io/samuelloza/patito-ide
+  IMAGE_NAME: ghcr.io/onlinejudgebo/patito-ide
 
 jobs:
   docker-image:
