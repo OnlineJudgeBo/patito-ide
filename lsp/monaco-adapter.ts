@@ -58,6 +58,7 @@ export function attachLanguageServer(
   editor: Monaco.editor.IStandaloneCodeEditor,
   language: LanguageDefinition,
   statusChanged: (status: LspStatus, detail: string) => void,
+  launchToken?: string,
 ) {
   ensureLspCompletionProvider(monaco, language);
   ensureLspLanguageFeatureProviders(monaco, language);
@@ -71,7 +72,7 @@ export function attachLanguageServer(
 
   const model = editor.getModel();
   if (model) client.didOpen(model);
-  client.connect();
+  client.connect(launchToken);
 
   let timer: number | undefined;
   const disposable = editor.onDidChangeModelContent(() => {

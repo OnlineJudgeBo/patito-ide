@@ -119,3 +119,34 @@ El contrato del juez está en [`docs/judge-api-contract.md`](docs/judge-api-cont
 docker build -t patito-ide .
 docker run --rm -p 3000:3000 --env-file .env.local patito-ide
 ```
+
+## Correr contra tu propio juez
+
+`patito-ide` y `patito-lsp-server` no dependen del resto de este workspace — cada uno
+trae su propio `docker-compose.yml` autocontenido. Para apuntarlos a tu propia
+plataforma:
+
+```bash
+cp .env.example .env
+cp public/vibe-config.example.json public/vibe-config.json
+# edita ambos archivos, luego:
+docker compose up -d --build
+```
+
+Qué editar:
+
+- **`public/vibe-config.json`** — `apiBaseUrl`, `contextUrl` y `paths.*` de tus
+  endpoints de ejecución/envío/estado. Se lee en runtime (el contenedor lo monta de
+  solo lectura), así que puedes cambiarlo sin reconstruir la imagen. La forma completa
+  del contrato REST está en [`docs/judge-api-contract.md`](docs/judge-api-contract.md).
+- **`.env`** — `PATITO_IDE_TOKEN_SECRET`/`_ISS`/`_AUD`: tu plataforma debe firmar los
+  tokens de lanzamiento (un JWT HS256 estándar) con este mismo secreto. Ver
+  [el contrato del token](docs/judge-api-contract.md#cómo-emitir-el-handoff-token)
+  para los claims exactos. `docker compose` no arranca si esto queda sin definir.
+- **`LSP_AUTH_TOKEN`** — solo hace falta si también corres `patito-lsp-server` (ver su
+  propio README); ambos contenedores deben compartir el mismo valor. Autocompletado y
+  diagnósticos son las únicas funciones que dependen de él — el IDE, ejecutar y enviar
+  código funcionan sin él.
+
+No hay forma integrada de servir más de una plataforma desde un mismo par IDE/LSP en
+ejecución — cada despliegue queda configurado para una sola plataforma a la vez.

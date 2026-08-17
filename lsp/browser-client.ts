@@ -101,12 +101,20 @@ function workspaceEditToMonaco(monaco: MonacoApi, edit?: LspWorkspaceEdit) {
   return edits.length ? { edits } : undefined;
 }
 
-function resolveWebSocketUrl(websocketUrl: string) {
-  if (!websocketUrl.startsWith('/')) return websocketUrl;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/g, '');
-  const path = basePath && !websocketUrl.startsWith(`${basePath}/`) ? `${basePath}${websocketUrl}` : websocketUrl;
-  return `${protocol}//${window.location.host}${path}`;
+function resolveWebSocketUrl(websocketUrl: string, launchToken?: string) {
+  const url = websocketUrl.startsWith('/')
+    ? (() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/g, '');
+        const path = basePath && !websocketUrl.startsWith(`${basePath}/`) ? `${basePath}${websocketUrl}` : websocketUrl;
+        return `${protocol}//${window.location.host}${path}`;
+      })()
+    : websocketUrl;
+
+  if (!launchToken) return url;
+  const withToken = new URL(url);
+  withToken.searchParams.set('token', launchToken);
+  return withToken.toString();
 }
 
 async function webSocketMessageToText(raw: string | ArrayBuffer | Blob) {
@@ -134,7 +142,7 @@ export class BrowserLspClient {
     this.statusChanged = statusChanged;
   }
 
-  connect() {
+  connect(launchToken?: string) {
     const config = getLanguageServerConfig(this.language.id);
     if (!config.websocketUrl) {
       this.statusChanged('disabled', `${config.name} not configured. Set its ${config.envKey} endpoint.`);
@@ -145,7 +153,7 @@ export class BrowserLspClient {
 
     this.initialized = false;
     this.statusChanged('connecting', `Connecting to ${config.name}…`);
-    this.socket = new WebSocket(resolveWebSocketUrl(config.websocketUrl));
+    this.socket = new WebSocket(resolveWebSocketUrl(config.websocketUrl, launchToken));
     this.socket.binaryType = 'arraybuffer';
     this.socket.addEventListener('open', async () => {
       try {
